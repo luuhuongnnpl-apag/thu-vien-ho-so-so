@@ -3,12 +3,12 @@
    ========================================================================== */
 
 const STORAGE_KEYS = {
-  BRANDING: 'pn_lib_branding_v2',
-  COLLECTIONS: 'pn_lib_collections_v2',
-  DOCUMENTS: 'pn_lib_documents_v2',
-  USERS: 'pn_lib_users_v2',
-  CURRENT_USER: 'pn_lib_current_user_v2',
-  SECURITY_CONFIG: 'pn_lib_security_v2'
+  BRANDING: 'pn_lib_branding_v4',
+  COLLECTIONS: 'pn_lib_collections_v4',
+  DOCUMENTS: 'pn_lib_documents_v4',
+  USERS: 'pn_lib_users_v4',
+  CURRENT_USER: 'pn_lib_current_user_v4',
+  SECURITY_CONFIG: 'pn_lib_security_v4'
 };
 
 const AppState = {
@@ -22,7 +22,7 @@ const AppState = {
     requireLoginToDownload: false
   },
   selectedCollectionId: 'all',
-  collapsedCollectionIds: {}, // Lưu trạng thái đóng/mở cây thư mục
+  collapsedCollectionIds: {},
   searchQuery: '',
   filterYear: 'all',
   filterType: 'all',
@@ -37,9 +37,10 @@ const AppState = {
 };
 
 // ==========================================================================
-// KHỞI TẠO HỆ THỐNG & ĐỒNG BỘ CLOUD
+// KHỞI TẠO HỆ THỐNG & ĐỒNG BỘ TỰ ĐỘNG (CLOUD + GOOGLE DRIVE)
 // ==========================================================================
 async function initApp() {
+  cleanupLegacyStorage();
   loadStateFromStorage();
   applyBrandingToDOM();
   bindEvents();
@@ -49,9 +50,28 @@ async function initApp() {
   renderCatalog();
   updateSidebarQuickStats();
 
+  // Tự động tải CSDL chung trên Cloud và tự động quét file mới trên Google Drive
   if (DriveService.hasCloudDatabase()) {
     await syncFromCloudSilent();
   }
+  if (DriveService.hasDriveAutoScan()) {
+    await autoMergeDriveFolderSilent();
+    // Tự động kiểm tra file mới đẩy lên Google Drive mỗi 35 giây
+    setInterval(() => {
+      autoMergeDriveFolderSilent();
+    }, 35000);
+  }
+}
+
+function cleanupLegacyStorage() {
+  const oldKeys = [
+    'ou_lib_collections_v1', 'ou_lib_documents_v1',
+    'pn_lib_branding_v2', 'pn_lib_collections_v2', 'pn_lib_documents_v2',
+    'pn_lib_branding_v3', 'pn_lib_collections_v3', 'pn_lib_documents_v3'
+  ];
+  oldKeys.forEach((k) => {
+    try { localStorage.removeItem(k); } catch (e) {}
+  });
 }
 
 function loadStateFromStorage() {
@@ -59,6 +79,8 @@ function loadStateFromStorage() {
     const savedBrand = localStorage.getItem(STORAGE_KEYS.BRANDING);
     if (savedBrand) {
       AppState.branding = { ...DEFAULT_BRANDING, ...JSON.parse(savedBrand) };
+    } else {
+      AppState.branding = { ...DEFAULT_BRANDING };
     }
 
     const savedCols = localStorage.getItem(STORAGE_KEYS.COLLECTIONS);
@@ -106,24 +128,24 @@ async function syncFromCloudSilent() {
     if (res && res.catalog) {
       if (res.catalog.branding) {
         AppState.branding = { ...DEFAULT_BRANDING, ...res.catalog.branding };
-        localStorage.setItem(STORAGE_KEYS.BRANDING, JSON.stringify(AppState.branding));
+        safeSetLocalStorage(STORAGE_KEYS.BRANDING, AppState.branding);
         applyBrandingToDOM();
       }
       if (Array.isArray(res.catalog.collections) && res.catalog.collections.length > 0) {
         AppState.collections = res.catalog.collections;
-        localStorage.setItem(STORAGE_KEYS.COLLECTIONS, JSON.stringify(AppState.collections));
+        safeSetLocalStorage(STORAGE_KEYS.COLLECTIONS, AppState.collections);
       }
       if (Array.isArray(res.catalog.documents)) {
         AppState.documents = res.catalog.documents;
-        localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(AppState.documents));
+        safeSetLocalStorage(STORAGE_KEYS.DOCUMENTS, AppState.documents);
       }
       if (Array.isArray(res.catalog.users) && res.catalog.users.length > 0) {
         AppState.users = res.catalog.users;
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(AppState.users));
+        safeSetLocalStorage(STORAGE_KEYS.USERS, AppState.users);
       }
       if (res.catalog.security) {
         AppState.security = res.catalog.security;
-        localStorage.setItem(STORAGE_KEYS.SECURITY_CONFIG, JSON.stringify(AppState.security));
+        safeSetLocalStorage(STORAGE_KEYS.SECURITY_CONFIG, AppState.security);
       }
       renderTopBar();
       renderCollectionsSidebar();
@@ -133,6 +155,58 @@ async function syncFromCloudSilent() {
     }
   } catch (e) {
     console.warn('Không thể tải dữ liệu Cloud:', e);
+  }
+}
+
+// Tự động gộp (Smart Merge) các thư mục & file mới đẩy lên Google Drive vào thư viện web
+async function autoMergeDriveFolderSilent(showNotification = false) {
+  if (!DriveService.hasDriveAutoScan()) return;
+  try {
+    const scanned = await DriveService.scanGoogleDriveFolder();
+    let newColsAdded = 0;
+    let newDocsAdded = 0;
+
+    if (Array.isArray(scanned.collections)) {
+      for (const sc of scanned.collections) {
+        if (sc.id === 'all') continue;
+        const exists = AppState.collections.some(
+          (c) => c.id === sc.id || (sc.driveFolderId && c.driveFolderId === sc.driveFolderId)
+        );
+        if (!exists) {
+          AppState.collections.push(sc);
+          newColsAdded++;
+        }
+      }
+    }
+
+    if (Array.isArray(scanned.documents)) {
+      for (const sd of scanned.documents) {
+        const exists = AppState.documents.some(
+          (d) => d.id === sd.id || (sd.driveFileId && d.driveFileId === sd.driveFileId)
+        );
+        if (!exists) {
+          AppState.documents.unshift(sd);
+          newDocsAdded++;
+        }
+      }
+    }
+
+    if (newColsAdded > 0 || newDocsAdded > 0) {
+      saveCollections();
+      saveDocuments();
+      renderCollectionsSidebar();
+      populateFilterDropdowns();
+      renderCatalog();
+      if (showNotification) {
+        showToast(`Đã tự động cập nhật ${newDocsAdded} tài liệu và ${newColsAdded} thư mục mới từ Google Drive!`);
+      }
+    } else if (showNotification) {
+      showToast('Kho thư viện đã đồng bộ mới nhất với Google Drive.');
+    }
+  } catch (e) {
+    if (showNotification) {
+      alert('Không thể đồng bộ từ Google Drive: ' + e.message);
+    }
   }
 }
 
@@ -151,30 +225,38 @@ async function pushStateToCloud() {
   }
 }
 
+function safeSetLocalStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn('Bộ nhớ localStorage đầy, đang tối ưu hóa dung lượng:', e);
+  }
+}
+
 function saveBranding() {
-  localStorage.setItem(STORAGE_KEYS.BRANDING, JSON.stringify(AppState.branding));
+  safeSetLocalStorage(STORAGE_KEYS.BRANDING, AppState.branding);
   applyBrandingToDOM();
   pushStateToCloud();
 }
 
 function saveCollections() {
-  localStorage.setItem(STORAGE_KEYS.COLLECTIONS, JSON.stringify(AppState.collections));
+  safeSetLocalStorage(STORAGE_KEYS.COLLECTIONS, AppState.collections);
   pushStateToCloud();
 }
 
 function saveDocuments() {
-  localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(AppState.documents));
+  safeSetLocalStorage(STORAGE_KEYS.DOCUMENTS, AppState.documents);
   updateSidebarQuickStats();
   pushStateToCloud();
 }
 
 function saveUsers() {
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(AppState.users));
+  safeSetLocalStorage(STORAGE_KEYS.USERS, AppState.users);
   pushStateToCloud();
 }
 
 function saveSecurity() {
-  localStorage.setItem(STORAGE_KEYS.SECURITY_CONFIG, JSON.stringify(AppState.security));
+  safeSetLocalStorage(STORAGE_KEYS.SECURITY_CONFIG, AppState.security);
   pushStateToCloud();
 }
 
@@ -200,14 +282,14 @@ function canViewDocument(doc) {
 }
 
 // ==========================================================================
-// 1. GIAO DIỆN & THƯƠNG HIỆU PHÚC NGUYÊN LIBRARY (CHỮ / MÀU / LOGO)
+// 1. GIAO DIỆN & LOGO CHÍNH THỨC PHÚC NGUYÊN LIBRARY
 // ==========================================================================
 function applyBrandingToDOM() {
   const b = AppState.branding || DEFAULT_BRANDING;
   const root = document.documentElement;
 
-  root.style.setProperty('--pn-primary', b.primaryColor || '#1b365d');
-  root.style.setProperty('--pn-gold', b.goldColor || '#c59b27');
+  root.style.setProperty('--pn-primary', b.primaryColor || '#254b73');
+  root.style.setProperty('--pn-gold', b.goldColor || '#214b2f');
   if (b.fontFamily) {
     root.style.setProperty('--font-main', b.fontFamily);
   }
@@ -219,14 +301,13 @@ function applyBrandingToDOM() {
   if (heroTitle) heroTitle.textContent = b.bannerTitle || 'PHÚC NGUYÊN LIBRARY';
 
   const heroSub = document.getElementById('heroBannerSubtitle');
-  if (heroSub) heroSub.textContent = b.bannerSubtitle || 'HỆ THỐNG LƯU TRỮ HỒ SƠ & TÀI LIỆU SỐ';
+  if (heroSub) heroSub.textContent = b.bannerSubtitle || 'RESEARCH LAW FOR BETTER LIFE • TÀI LIỆU SỐ';
 
   const footerBrand = document.getElementById('footerBrandName');
   if (footerBrand) footerBrand.textContent = b.libraryName || 'PHÚC NGUYÊN LIBRARY';
 
-  const logoHtml = b.logoDataUrl
-    ? `<img src="${escapeHtml(b.logoDataUrl)}" alt="Logo" style="width:100%;height:100%;object-fit:contain;" />`
-    : PHUC_NGUYEN_LOGO_SVG;
+  const logoSrc = b.logoDataUrl || 'logo.png';
+  const logoHtml = `<img src="${escapeHtml(logoSrc)}" alt="Phúc Nguyên Library" style="width:100%;height:100%;object-fit:contain;border-radius:50%;" />`;
 
   const topLogoWrap = document.getElementById('topBrandLogoWrap');
   if (topLogoWrap) topLogoWrap.innerHTML = logoHtml;
@@ -241,14 +322,13 @@ function openBrandingModal() {
   document.getElementById('brandLibraryName').value = b.libraryName || '';
   document.getElementById('brandBannerTitle').value = b.bannerTitle || '';
   document.getElementById('brandBannerSubtitle').value = b.bannerSubtitle || '';
-  document.getElementById('brandPrimaryColor').value = b.primaryColor || '#1b365d';
-  document.getElementById('brandGoldColor').value = b.goldColor || '#c59b27';
+  document.getElementById('brandPrimaryColor').value = b.primaryColor || '#254b73';
+  document.getElementById('brandGoldColor').value = b.goldColor || '#214b2f';
   document.getElementById('brandFontSelect').value = b.fontFamily || "'Be Vietnam Pro', 'Roboto', sans-serif";
 
+  const logoSrc = b.logoDataUrl || 'logo.png';
   const previewEl = document.getElementById('brandLogoPreviewBox');
-  previewEl.innerHTML = b.logoDataUrl
-    ? `<img src="${escapeHtml(b.logoDataUrl)}" style="width:100%;height:100%;object-fit:contain;" />`
-    : PHUC_NGUYEN_LOGO_SVG;
+  previewEl.innerHTML = `<img src="${escapeHtml(logoSrc)}" style="width:100%;height:100%;object-fit:contain;border-radius:50%;" />`;
 
   openModal('brandingModal');
 }
@@ -259,7 +339,7 @@ function handleSaveBranding(e) {
     ...AppState.branding,
     libraryName: document.getElementById('brandLibraryName').value.trim() || 'PHÚC NGUYÊN LIBRARY',
     bannerTitle: document.getElementById('brandBannerTitle').value.trim() || 'PHÚC NGUYÊN LIBRARY',
-    bannerSubtitle: document.getElementById('brandBannerSubtitle').value.trim() || 'HỆ THỐNG LƯU TRỮ HỒ SƠ & TÀI LIỆU SỐ',
+    bannerSubtitle: document.getElementById('brandBannerSubtitle').value.trim() || 'RESEARCH LAW FOR BETTER LIFE • TÀI LIỆU SỐ',
     primaryColor: document.getElementById('brandPrimaryColor').value,
     goldColor: document.getElementById('brandGoldColor').value,
     fontFamily: document.getElementById('brandFontSelect').value
@@ -278,11 +358,11 @@ function renderTopBar() {
   if (driveCfg.firebaseDbUrl && driveCfg.gasWebAppUrl) {
     statusEl.innerHTML = `<i class="fa-solid fa-cloud"></i> Đã nối Google Drive + Firebase`;
   } else if (driveCfg.gasWebAppUrl) {
-    statusEl.innerHTML = `<i class="fa-brands fa-google-drive"></i> Đã nối Cloud Google Drive`;
+    statusEl.innerHTML = `<i class="fa-brands fa-google-drive"></i> Đã nối Tự động Google Drive`;
   } else if (driveCfg.firebaseDbUrl) {
     statusEl.innerHTML = `<i class="fa-solid fa-fire"></i> Đã nối Firebase Cloud`;
   } else {
-    statusEl.innerHTML = `<i class="fa-brands fa-google-drive"></i> Kho Google Drive`;
+    statusEl.innerHTML = `<i class="fa-brands fa-google-drive"></i> Cấu hình Tự động Đồng bộ Drive`;
   }
 
   const hasEditPerm = canManageDocs();
@@ -296,6 +376,7 @@ function renderTopBar() {
   showEl('btnOpenUploadTop', hasEditPerm);
   showEl('btnToolbarAddDoc', hasEditPerm);
   showEl('btnToolbarLinkDrive', hasEditPerm);
+  showEl('btnToolbarSyncDrive', hasEditPerm);
   showEl('btnManageCollections', hasEditPerm);
   showEl('btnOpenDriveConfigTop', adminOnly);
   showEl('btnOpenUsersTop', adminOnly);
@@ -314,8 +395,6 @@ function renderTopBar() {
 // ==========================================================================
 // 2. BỘ SƯU TẬP ĐA CẤP (THƯ MỤC TRONG THƯ MỤC & SỬA TÊN BỘ SƯU TẬP)
 // ==========================================================================
-
-// Lấy toàn bộ ID của một bộ sưu tập và tất cả các thư mục con/cháu bên trong nó
 function getDescendantCollectionIds(parentId) {
   const result = new Set([parentId]);
   let added = true;
@@ -331,7 +410,6 @@ function getDescendantCollectionIds(parentId) {
   return Array.from(result);
 }
 
-// Lấy đường dẫn phân cấp (Breadcrumb) của một bộ sưu tập
 function getCollectionPath(colId) {
   if (!colId || colId === 'all') return [];
   const path = [];
@@ -347,7 +425,6 @@ function getCollectionPath(colId) {
   return path;
 }
 
-// Xây dựng danh sách phẳng theo thứ tự cây phân cấp (Tree Flattening)
 function getFlattenedCollectionsTree() {
   const realCols = AppState.collections.filter((c) => c.id !== 'all');
   const colMap = new Map(realCols.map((c) => [c.id, c]));
@@ -378,7 +455,6 @@ function getFlattenedCollectionsTree() {
   return result;
 }
 
-// Dùng cho các thẻ <select> cần hiển thị tất cả thư mục kèm thụt lề
 function getAllCollectionsTreeForSelect(excludeId = null) {
   const realCols = AppState.collections.filter((c) => c.id !== 'all');
   const excludedSet = excludeId ? new Set(getDescendantCollectionIds(excludeId)) : new Set();
@@ -463,9 +539,19 @@ function renderCollectionsSidebar() {
     `;
   }
 
+  if (treeItems.length === 0 && hasEdit) {
+    html += `
+      <li style="padding:14px 10px;text-align:center;border-top:1px dashed #cbd5e1;margin-top:6px;">
+        <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Kho thư mục đang trống để bạn thiết kế từ đầu.</div>
+        <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;font-size:12.5px;padding:7px 10px;" onclick="openCollectionsManagerModal()">
+          <i class="fa-solid fa-folder-plus"></i> + Tạo Thư mục đầu tiên
+        </button>
+      </li>
+    `;
+  }
+
   listEl.innerHTML = html;
 
-  // Sự kiện đóng/mở thư mục con
   listEl.querySelectorAll('.tree-caret').forEach((caret) => {
     caret.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -475,7 +561,6 @@ function renderCollectionsSidebar() {
     });
   });
 
-  // Sự kiện thêm nhanh thư mục con
   listEl.querySelectorAll('[data-add-sub]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -484,7 +569,6 @@ function renderCollectionsSidebar() {
     });
   });
 
-  // Sự kiện sửa nhanh tên bộ sưu tập
   listEl.querySelectorAll('[data-edit-col]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -493,7 +577,6 @@ function renderCollectionsSidebar() {
     });
   });
 
-  // Sự kiện chọn bộ sưu tập để lọc tài liệu
   listEl.querySelectorAll('.collection-item').forEach((item) => {
     item.addEventListener('click', () => {
       AppState.selectedCollectionId = item.getAttribute('data-collection-id');
@@ -504,7 +587,11 @@ function renderCollectionsSidebar() {
 }
 
 function openCollectionsManagerModal(editColId = null, presetParentId = null) {
-  if (!canManageDocs()) return;
+  if (!canManageDocs()) {
+    showToast('Vui lòng đăng nhập quyền Quản trị để quản lý Bộ sưu tập!');
+    openLoginModal();
+    return;
+  }
   resetCollectionForm(editColId, presetParentId);
   renderCollectionsManagerTable();
   openModal('collectionsModal');
@@ -542,7 +629,7 @@ function resetCollectionForm(editColId = null, presetParentId = null) {
     }
   }
 
-  formHeading.innerHTML = `<i class="fa-solid fa-folder-plus"></i> Thêm Bộ sưu tập / Thư mục con mới`;
+  formHeading.innerHTML = `<i class="fa-solid fa-folder-plus"></i> Thêm Bộ sưu tập / Thư mục mới`;
   document.getElementById('colFormName').value = '';
   parentSelect.value = presetParentId || '';
   document.getElementById('colFormFolderId').value = '';
@@ -554,6 +641,17 @@ function resetCollectionForm(editColId = null, presetParentId = null) {
 function renderCollectionsManagerTable() {
   const tbody = document.getElementById('collectionsManagerBody');
   const allTree = getAllCollectionsTreeForSelect(null);
+
+  if (allTree.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="padding:20px;text-align:center;color:#64748b;">
+          Chưa có thư mục nào. Hãy nhập tên thư mục ở khung phía trên và nhấn <strong>"Thêm vào danh mục"</strong> để bắt đầu thiết kế cây thư mục.
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   tbody.innerHTML = allTree
     .map((c) => {
@@ -664,6 +762,24 @@ function deleteCollection(colId) {
   showToast('Đã xóa bộ sưu tập.');
 }
 
+function handleClearAllLibraryData() {
+  if (!canManageDocs()) return;
+  if (!confirm('Bạn có chắc chắn muốn XÓA TẤT CẢ thư mục và tài liệu hiện có để làm mới hoàn toàn từ đầu không?')) {
+    return;
+  }
+  AppState.collections = [{ id: 'all', name: 'Tất cả bộ sưu tập', parentId: null, description: 'Toàn bộ hồ sơ và tài liệu số trong kho lưu trữ', driveFolderId: '' }];
+  AppState.documents = [];
+  AppState.selectedCollectionId = 'all';
+  saveCollections();
+  saveDocuments();
+  resetCollectionForm(null, null);
+  renderCollectionsManagerTable();
+  renderCollectionsSidebar();
+  populateFilterDropdowns();
+  renderCatalog();
+  showToast('Đã xóa sạch toàn bộ Thư mục & Tài liệu!');
+}
+
 // ==========================================================================
 // 3. ĐĂNG NHẬP BẢO MẬT (KHÔNG GỢI Ý MẬT KHẨU) & CẤP TÀI KHOẢN ĐỘC GIẢ
 // ==========================================================================
@@ -710,7 +826,7 @@ function handleLoginSubmit(e) {
   }
 
   AppState.currentUser = found;
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(found));
+  safeSetLocalStorage(STORAGE_KEYS.CURRENT_USER, found);
   closeModal('loginModal');
   renderTopBar();
   renderCollectionsSidebar();
@@ -824,7 +940,7 @@ function handleDeleteUser(username) {
 }
 
 // ==========================================================================
-// 4 & 5. KÉO THẢ ẢNH BÌA & GẮN TÀI LIỆU GOOGLE DRIVE KHÔNG CẦN TẢI MỚI
+// 4 & 5. KÉO THẢ ẢNH BÌA & GẮN / UPLOAD TÀI LIỆU GOOGLE DRIVE TỨC THÌ
 // ==========================================================================
 function setDocSourceMode(mode) {
   AppState.docSourceMode = mode;
@@ -852,7 +968,6 @@ function updateCoverPreviewInForm() {
   }
 }
 
-// Nén nhẹ ảnh bìa khi kéo thả để lưu trữ Cloud nhanh và mượt
 function processCoverImageFile(file, callback) {
   if (!file || !file.type.startsWith('image/')) {
     alert('Vui lòng kéo thả hoặc chọn file hình ảnh (JPG, PNG, WebP...)!');
@@ -899,7 +1014,7 @@ function openAddDocumentModal(defaultMode = 'drive_link') {
   document.getElementById('docFormId').value = '';
   document.getElementById('docFormCode').value = `PN-${new Date().getFullYear()}-${String(AppState.documents.length + 1).padStart(3, '0')}`;
   document.getElementById('docFormTitle').value = '';
-  populateDocFormCollections(AppState.selectedCollectionId === 'all' ? 'bao-tap-chi' : AppState.selectedCollectionId);
+  populateDocFormCollections(AppState.selectedCollectionId);
   document.getElementById('docFormAuthor').value = '';
   document.getElementById('docFormYear').value = new Date().getFullYear();
   document.getElementById('docFormPages').value = '15';
@@ -956,19 +1071,27 @@ function populateDocFormCollections(selectedId) {
   const bulkSelect = document.getElementById('bulkDocCollection');
   const treeOpts = getAllCollectionsTreeForSelect(null);
 
-  const html = treeOpts
-    .map((c) => {
-      const prefix = '— '.repeat(c.level);
-      return `<option value="${escapeHtml(c.id)}">${prefix}${escapeHtml(c.name)}</option>`;
-    })
-    .join('');
+  const html =
+    `<option value="all">-- Tất cả bộ sưu tập (Thư mục chung) --</option>` +
+    treeOpts
+      .map((c) => {
+        const prefix = '— '.repeat(c.level);
+        return `<option value="${escapeHtml(c.id)}">${prefix}${escapeHtml(c.name)}</option>`;
+      })
+      .join('');
 
   select.innerHTML = html;
   if (bulkSelect) bulkSelect.innerHTML = html;
 
-  if (selectedId && treeOpts.some((c) => c.id === selectedId)) {
+  if (selectedId && (selectedId === 'all' || treeOpts.some((c) => c.id === selectedId))) {
     select.value = selectedId;
     if (bulkSelect) bulkSelect.value = selectedId;
+  } else if (treeOpts.length > 0) {
+    select.value = treeOpts[0].id;
+    if (bulkSelect) bulkSelect.value = treeOpts[0].id;
+  } else {
+    select.value = 'all';
+    if (bulkSelect) bulkSelect.value = 'all';
   }
 }
 
@@ -989,11 +1112,10 @@ async function handleSaveDocumentForm(e) {
       return;
     }
 
-    const targetColId = document.getElementById('bulkDocCollection').value;
+    const targetColId = document.getElementById('bulkDocCollection').value || 'all';
     let addedCount = 0;
 
     rawLines.forEach((line, idx) => {
-      // Hỗ trợ cú pháp: "Tên tài liệu | https://drive.google.com/..." hoặc chỉ cần dán link
       let titlePart = '';
       let linkPart = line;
       if (line.includes('|')) {
@@ -1038,19 +1160,35 @@ async function handleSaveDocumentForm(e) {
       return;
     }
 
+    // Tự động chuyển sang thư mục vừa gắn và xóa bộ lọc để hiển thị ngay
+    AppState.selectedCollectionId = targetColId;
+    AppState.searchQuery = '';
+    document.getElementById('searchInput').value = '';
+
     saveDocuments();
+    populateFilterDropdowns();
     renderCollectionsSidebar();
     renderCatalog();
     closeModal('docFormModal');
-    showToast(`Đã gắn trực tiếp ${addedCount} tài liệu từ Google Drive vào thư viện!`);
+    showToast(`Đã gắn trực tiếp ${addedCount} tài liệu lên thư viện!`);
     return;
   }
 
   // Chế độ Gắn 1 tài liệu Drive có sẵn hoặc Tải file mới
-  const titleVal = document.getElementById('docFormTitle').value.trim();
+  let driveUrlInput = document.getElementById('docFormDriveUrl').value.trim();
+  let driveFileId = DriveService.extractFileId(driveUrlInput);
+  let titleVal = document.getElementById('docFormTitle').value.trim();
+
+  // Tự động tạo tiêu đề nếu người dùng chỉ dán link Drive hoặc chọn file mà quên gõ tiêu đề
   if (!titleVal) {
-    alert('Vui lòng nhập Tên hồ sơ / Tiêu đề tài liệu!');
-    return;
+    if (AppState.pendingUploadFile) {
+      titleVal = AppState.pendingUploadFile.name.replace(/\.[^/.]+$/, '');
+    } else if (driveFileId) {
+      titleVal = `Tài liệu Google Drive (#${driveFileId.slice(0, 6)})`;
+    } else {
+      alert('Vui lòng nhập Tên hồ sơ / Tiêu đề tài liệu (hoặc dán Link Google Drive / chọn File tải lên)!');
+      return;
+    }
   }
 
   const btnSave = document.getElementById('btnSaveDocForm');
@@ -1059,17 +1197,16 @@ async function handleSaveDocumentForm(e) {
 
   try {
     const existingId = document.getElementById('docFormId').value;
-    const colId = document.getElementById('docFormCollection').value;
+    const colId = document.getElementById('docFormCollection').value || 'all';
     const colObj = AppState.collections.find((c) => c.id === colId);
 
-    let driveUrlInput = document.getElementById('docFormDriveUrl').value.trim();
-    let driveFileId = DriveService.extractFileId(driveUrlInput);
     let fileType = document.getElementById('docFormType').value;
     let fileSize = document.getElementById('docFormSize').value.trim() || 'Google Drive';
     let localBlobId = '';
     let localFileUrl = '';
 
-    if (AppState.docSourceMode === 'upload_file' && AppState.pendingUploadFile) {
+    // Nếu người dùng có chọn file từ máy tính (dù đang ở tab nào cũng tự động xử lý)
+    if (AppState.pendingUploadFile) {
       const uploadRes = await DriveService.uploadFile(
         AppState.pendingUploadFile,
         {
@@ -1107,7 +1244,7 @@ async function handleSaveDocumentForm(e) {
           code: document.getElementById('docFormCode').value.trim(),
           title: titleVal,
           collectionId: colId,
-          author: document.getElementById('docFormAuthor').value.trim() || 'Đang cập nhật',
+          author: document.getElementById('docFormAuthor').value.trim() || 'Phúc Nguyên Library',
           year: Number(document.getElementById('docFormYear').value) || new Date().getFullYear(),
           pages: Number(document.getElementById('docFormPages').value) || 1,
           fileType,
@@ -1129,7 +1266,7 @@ async function handleSaveDocumentForm(e) {
         code: document.getElementById('docFormCode').value.trim() || `PN-${Date.now()}`,
         title: titleVal,
         collectionId: colId,
-        author: document.getElementById('docFormAuthor').value.trim() || 'Đang cập nhật',
+        author: document.getElementById('docFormAuthor').value.trim() || 'Phúc Nguyên Library',
         year: Number(document.getElementById('docFormYear').value) || new Date().getFullYear(),
         pages: Number(document.getElementById('docFormPages').value) || 1,
         views: 1,
@@ -1148,8 +1285,16 @@ async function handleSaveDocumentForm(e) {
         uploadedBy: AppState.currentUser ? AppState.currentUser.fullName : 'Admin'
       };
       AppState.documents.unshift(newDoc);
-      showToast('Đã lưu hồ sơ vào thư viện!');
+      showToast('Đã đẩy hồ sơ lên thư viện thành công!');
     }
+
+    // Tự động chuyển sang đúng Bộ sưu tập vừa thêm và xóa bộ lọc để hiển thị ngay lập tức
+    AppState.selectedCollectionId = colId;
+    AppState.searchQuery = '';
+    AppState.filterYear = 'all';
+    AppState.filterType = 'all';
+    AppState.filterAuthor = '';
+    document.getElementById('searchInput').value = '';
 
     saveDocuments();
     populateFilterDropdowns();
@@ -1301,9 +1446,22 @@ function renderCatalog() {
   if (filtered.length === 0) {
     container.className = '';
     container.innerHTML = `
-      <div style="background:#fff;padding:42px 20px;text-align:center;border:1px solid #e5e7eb;border-radius:4px;color:#6b7280;">
-        <i class="fa-regular fa-folder-open" style="font-size:36px;color:#9ca3af;margin-bottom:10px;"></i>
-        <p style="font-size:15px;">Không tìm thấy hồ sơ / tài liệu nào trong mục này.</p>
+      <div style="background:#fff;padding:44px 20px;text-align:center;border:1px solid #e5e7eb;border-radius:6px;color:#6b7280;">
+        <i class="fa-regular fa-folder-open" style="font-size:38px;color:var(--pn-primary);opacity:0.65;margin-bottom:12px;"></i>
+        <h4 style="color:var(--pn-primary);font-size:16px;margin-bottom:6px;">Chưa có tài liệu nào trong mục này</h4>
+        <p style="font-size:13.5px;margin-bottom:16px;">Hãy tạo Thư mục Bộ sưu tập hoặc gắn/tải tài liệu từ Google Drive lên thư viện.</p>
+        ${
+          canManageDocs()
+            ? `<div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+                 <button class="btn btn-outline" onclick="openCollectionsManagerModal()">
+                   <i class="fa-solid fa-folder-plus"></i> 1. Thiết kế Thư mục Bộ sưu tập
+                 </button>
+                 <button class="btn btn-primary" onclick="openAddDocumentModal('drive_link')">
+                   <i class="fa-brands fa-google-drive"></i> 2. Gắn / Tải Tài liệu lên
+                 </button>
+               </div>`
+            : ''
+        }
       </div>
     `;
     return;
@@ -1362,7 +1520,7 @@ function renderGridCard(doc) {
 
 function renderListRow(doc) {
   const col = AppState.collections.find((c) => c.id === doc.collectionId);
-  const colName = col ? col.name : 'Chưa phân loại';
+  const colName = col ? col.name : 'Thư mục chung';
   const coverContent = doc.coverUrl
     ? `<img class="custom-cover" src="${escapeHtml(doc.coverUrl)}" alt="${escapeHtml(doc.title)}" />`
     : OU_BOOK_EMBLEM_SVG;
@@ -1414,7 +1572,7 @@ async function openDocumentDetail(docId) {
   renderCatalog();
 
   const colPath = getCollectionPath(doc.collectionId);
-  const colName = colPath.length > 0 ? colPath.map((c) => c.name).join(' / ') : doc.collectionId;
+  const colName = colPath.length > 0 ? colPath.map((c) => c.name).join(' / ') : 'Thư mục chung';
 
   if (doc.localBlobId && !doc.localFileUrl) {
     const blobUrl = await DriveService.getBlobUrlFromIndexedDB(doc.localBlobId);
@@ -1471,7 +1629,7 @@ async function openDocumentDetail(docId) {
       </tr>
       <tr>
         <th>Google Drive ID:</th>
-        <td>${fileId && !fileId.startsWith('1_sample_') ? `<code>${escapeHtml(fileId)}</code>` : '<span style="color:#64748b;">Chưa gắn ID Drive thực</span>'}</td>
+        <td>${fileId ? `<code>${escapeHtml(fileId)}</code>` : '<span style="color:#64748b;">Lưu cục bộ trên trình duyệt</span>'}</td>
       </tr>
       <tr>
         <th>Ngày cập nhật:</th>
@@ -1493,7 +1651,7 @@ async function openDocumentDetail(docId) {
         <i class="fa-solid fa-download"></i> Tải xuống (${doc.downloads})
       </button>
       ${
-        fileId && !fileId.startsWith('1_sample_')
+        fileId
           ? `<a class="btn btn-outline" href="${escapeHtml(DriveService.getWebViewUrl(doc))}" target="_blank" rel="noopener">
               <i class="fa-brands fa-google-drive"></i> Mở trên Drive
              </a>`
@@ -1539,7 +1697,7 @@ function renderDocumentPreviewPane(doc) {
     <div style="background:#fff;width:90%;max-width:600px;margin:24px auto;padding:32px;border-radius:4px;box-shadow:0 10px 25px rgba(0,0,0,0.35);color:#1e293b;">
       <div style="border-bottom:2px solid var(--pn-primary);padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:12px;font-weight:700;color:var(--pn-primary);text-transform:uppercase;">PHÚC NGUYÊN LIBRARY &bull; ${escapeHtml(doc.code || doc.id)}</span>
-        <span style="background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${escapeHtml(doc.fileType || 'PDF')} PREVIEW</span>
+        <span style="background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${escapeHtml(doc.fileType || 'PDF')}</span>
       </div>
       <h3 style="font-size:17px;color:#0f172a;margin-bottom:10px;">${escapeHtml(doc.title)}</h3>
       <p style="font-size:13px;color:#475569;margin-bottom:14px;">
@@ -1552,7 +1710,7 @@ function renderDocumentPreviewPane(doc) {
         canManageDocs()
           ? `<div style="background:#eff6ff;border:1px dashed #93c5fd;border-radius:6px;padding:12px;font-size:13px;color:#1e3a8a;">
                <button class="btn btn-primary" style="font-size:12.5px;padding:6px 12px;" onclick="closeModal('detailModal'); openEditDocumentModal('${escapeHtml(doc.id)}')">
-                 <i class="fa-brands fa-google-drive"></i> Gắn Link Google Drive có sẵn cho tài liệu này
+                 <i class="fa-brands fa-google-drive"></i> Gắn Link Google Drive cho tài liệu này
                </button>
              </div>`
           : ''
@@ -1576,7 +1734,7 @@ function handleDownloadDocument(docId) {
   renderCatalog();
 
   const dlUrl = DriveService.getDownloadUrl(doc);
-  if (dlUrl && !dlUrl.includes('1_sample_')) {
+  if (dlUrl) {
     const a = document.createElement('a');
     a.href = dlUrl;
     a.target = '_blank';
@@ -1585,25 +1743,6 @@ function handleDownloadDocument(docId) {
     a.click();
     a.remove();
     showToast(`Đang tải xuống: ${doc.title}`);
-  } else {
-    const content = [
-      `PHÚC NGUYÊN LIBRARY - PHIẾU THÔNG TIN HỒ SƠ`,
-      `===========================================`,
-      `Mã hồ sơ: ${doc.code || doc.id}`,
-      `Tiêu đề: ${doc.title}`,
-      `Tác giả / Cơ quan: ${doc.author}`,
-      `Năm xuất bản: ${doc.year}`,
-      `Định dạng: ${doc.fileType} (${doc.fileSize})`,
-      `Tóm tắt: ${doc.description}`
-    ].join('\n');
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${doc.code || doc.id}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Đã tải xuống phiếu thông tin hồ sơ.');
   }
 }
 
@@ -1622,7 +1761,7 @@ function handleDeleteDocument(docId) {
 }
 
 // ==========================================================================
-// CẤU HÌNH GOOGLE DRIVE & THỐNG KÊ
+// CẤU HÌNH GOOGLE DRIVE & ĐỒNG BỘ TỰ ĐỘNG
 // ==========================================================================
 function openDriveConfigModal() {
   const cfg = DriveService.getConfig();
@@ -1643,7 +1782,9 @@ async function handleSaveDriveConfig(e) {
   DriveService.saveConfig(cfg);
   renderTopBar();
 
-  if (DriveService.hasCloudDatabase()) {
+  if (DriveService.hasDriveAutoScan()) {
+    await autoMergeDriveFolderSilent(true);
+  } else if (DriveService.hasCloudDatabase()) {
     await pushStateToCloud();
   }
 
@@ -1662,25 +1803,22 @@ async function handleScanDriveFolderNow() {
   btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét thư mục Google Drive...`;
 
   try {
-    const res = await DriveService.scanGoogleDriveFolder();
-    if (res.collections && res.collections.length > 1) {
-      AppState.collections = res.collections;
-    }
-    if (res.documents && res.documents.length > 0) {
-      AppState.documents = res.documents;
-    }
-    saveCollections();
-    saveDocuments();
-    renderCollectionsSidebar();
-    populateFilterDropdowns();
-    renderCatalog();
-    showToast(`Đã gắn tự động ${res.documents.length} hồ sơ có sẵn từ Google Drive!`);
+    await autoMergeDriveFolderSilent(true);
     closeModal('driveConfigModal');
   } catch (err) {
     alert('Lỗi khi quét thư mục Google Drive: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<i class="fa-solid fa-folder-tree"></i> Quét tự động các File có sẵn từ Drive`;
+  }
+}
+
+async function handleManualSyncButton() {
+  if (DriveService.hasDriveAutoScan()) {
+    showToast('Đang kiểm tra và đồng bộ tài liệu mới từ Google Drive...');
+    await autoMergeDriveFolderSilent(true);
+  } else {
+    openDriveConfigModal();
   }
 }
 
@@ -1709,7 +1847,7 @@ function downloadCloudConfigFile() {
 
 function openStatsModal() {
   const totalDocs = AppState.documents.length;
-  const totalCols = AppState.collections.length - 1;
+  const totalCols = Math.max(0, AppState.collections.length - 1);
   const totalViews = AppState.documents.reduce((s, d) => s + (Number(d.views) || 0), 0);
   const totalDownloads = AppState.documents.reduce((s, d) => s + (Number(d.downloads) || 0), 0);
 
@@ -1855,7 +1993,6 @@ function bindEvents() {
     renderCatalog();
   });
 
-  // Kiểm tra nhanh link Google Drive khi người dùng dán vào ô Gắn tài liệu
   const driveUrlInput = document.getElementById('docFormDriveUrl');
   driveUrlInput.addEventListener('input', () => {
     const val = driveUrlInput.value.trim();
@@ -1867,14 +2004,13 @@ function bindEvents() {
     const fId = DriveService.extractFileId(val);
     if (fId) {
       statusEl.style.color = '#059669';
-      statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đã nhận diện Google Drive File ID: <code>${escapeHtml(fId)}</code> (Sẵn sàng gắn trực tiếp không cần tải mới)`;
+      statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đã nhận diện Google Drive File ID: <code>${escapeHtml(fId)}</code>`;
     } else {
       statusEl.style.color = '#d97706';
       statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Chưa nhận diện được ID chuẩn từ đường link này.`;
     }
   });
 
-  // Kéo thả file tài liệu để upload mới
   const dropzone = document.getElementById('uploadDropzone');
   const fileInput = document.getElementById('docFileInput');
 
@@ -1898,7 +2034,6 @@ function bindEvents() {
     }
   });
 
-  // 4. Kéo thả Ảnh bìa tài liệu (Drag & Drop Cover Image)
   const coverDropzone = document.getElementById('coverDropzone');
   const coverInput = document.getElementById('docCoverInput');
 
@@ -1935,7 +2070,6 @@ function bindEvents() {
     updateCoverPreviewInForm();
   });
 
-  // Kéo thả Logo thương hiệu trong Modal Giao diện
   const logoDropzone = document.getElementById('brandLogoDropzone');
   const logoInput = document.getElementById('brandLogoFileInput');
   if (logoDropzone && logoInput) {
@@ -1951,7 +2085,7 @@ function bindEvents() {
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
         processCoverImageFile(e.dataTransfer.files[0], (dataUrl) => {
           AppState.branding.logoDataUrl = dataUrl;
-          document.getElementById('brandLogoPreviewBox').innerHTML = `<img src="${escapeHtml(dataUrl)}" style="width:100%;height:100%;object-fit:contain;" />`;
+          document.getElementById('brandLogoPreviewBox').innerHTML = `<img src="${escapeHtml(dataUrl)}" style="width:100%;height:100%;object-fit:contain;border-radius:50%;" />`;
           showToast('Đã nhận diện Logo mới!');
         });
       }
@@ -1960,14 +2094,13 @@ function bindEvents() {
       if (e.target.files && e.target.files[0]) {
         processCoverImageFile(e.target.files[0], (dataUrl) => {
           AppState.branding.logoDataUrl = dataUrl;
-          document.getElementById('brandLogoPreviewBox').innerHTML = `<img src="${escapeHtml(dataUrl)}" style="width:100%;height:100%;object-fit:contain;" />`;
+          document.getElementById('brandLogoPreviewBox').innerHTML = `<img src="${escapeHtml(dataUrl)}" style="width:100%;height:100%;object-fit:contain;border-radius:50%;" />`;
           showToast('Đã nhận diện Logo mới!');
         });
       }
     });
   }
 
-  // Các Form chính
   document.getElementById('docForm').addEventListener('submit', handleSaveDocumentForm);
   document.getElementById('collectionForm').addEventListener('submit', handleSaveCollectionForm);
   document.getElementById('driveConfigForm').addEventListener('submit', handleSaveDriveConfig);
@@ -1986,17 +2119,7 @@ function bindEvents() {
     saveSecurity();
   });
 
-  document.getElementById('btnResetDefaultData').addEventListener('click', () => {
-    if (confirm('Khôi phục lại 19 tài liệu mẫu và danh mục mặc định ban đầu?')) {
-      localStorage.removeItem(STORAGE_KEYS.COLLECTIONS);
-      localStorage.removeItem(STORAGE_KEYS.DOCUMENTS);
-      loadStateFromStorage();
-      renderCollectionsSidebar();
-      populateFilterDropdowns();
-      renderCatalog();
-      showToast('Đã khôi phục dữ liệu mẫu mặc định.');
-    }
-  });
+  document.getElementById('btnResetDefaultData').addEventListener('click', handleClearAllLibraryData);
 }
 
 function handleFileSelected(file) {
