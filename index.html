@@ -3,80 +3,89 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TÀI LIỆU SỐ - Hệ Thống Lưu Trữ Hồ Sơ & Thư Viện Số (Google Drive)</title>
-  <!-- Google Fonts Roboto & FontAwesome Icons -->
+  <title>PHÚC NGUYÊN LIBRARY - Hệ Thống Lưu Trữ Hồ Sơ & Thư Viện Số</title>
+  <!-- Google Fonts: Be Vietnam Pro & Merriweather -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Merriweather:wght@700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
   <!-- ========================================================================
-       THANH QUẢN TRỊ & TRẠNG THÁI KẾT NỐI GOOGLE DRIVE / CLOUD
+       THANH QUẢN TRỊ & ĐĂNG NHẬP (PHÚC NGUYÊN LIBRARY)
        ======================================================================== -->
   <header class="top-utility-bar">
     <div class="utility-left">
       <a href="#" class="brand-badge" onclick="location.reload()">
-        <i class="fa-solid fa-building-columns"></i>
-        <span>THƯ VIỆN HỒ SƠ SỐ</span>
+        <span id="topBrandLogoWrap" class="brand-logo-img"></span>
+        <span id="topBrandNameText">PHÚC NGUYÊN LIBRARY</span>
       </a>
-      <span id="driveStatusPill" class="drive-status-pill" onclick="openDriveConfigModal()" title="Nhấn để cấu hình kết nối Google Drive & Cloud Database">
-        <i class="fa-brands fa-google-drive"></i> Đang kiểm tra Google Drive...
+      <span id="driveStatusPill" class="drive-status-pill" onclick="openDriveConfigModal()" title="Cấu hình kết nối Google Drive & Cloud Database">
+        <i class="fa-brands fa-google-drive"></i> Kho Google Drive
       </span>
     </div>
 
     <div class="utility-right">
-      <button id="btnOpenUploadTop" class="util-btn primary-action" onclick="openAddDocumentModal()">
-        <i class="fa-solid fa-cloud-arrow-up"></i> + Upload Hồ sơ lên Drive
+      <button id="btnOpenUploadTop" class="util-btn primary-action" onclick="openAddDocumentModal('drive_link')">
+        <i class="fa-brands fa-google-drive"></i> + Gắn / Tải Tài liệu Drive
       </button>
-      <button class="util-btn" onclick="openDriveConfigModal()">
-        <i class="fa-brands fa-google-drive"></i> Kết nối Drive / Firebase
+      <button id="btnOpenUsersTop" class="util-btn" onclick="openUserManagementModal()">
+        <i class="fa-solid fa-users-gear"></i> Cấp tài khoản
       </button>
-      <button class="util-btn" style="background:rgba(245,158,11,0.25);border-color:rgba(251,191,36,0.5);" onclick="openModal('deployGuideModal')">
-        <i class="fa-solid fa-globe"></i> Ban hành Web (GitHub / Firebase)
+      <button id="btnOpenBrandingTop" class="util-btn" onclick="openBrandingModal()">
+        <i class="fa-solid fa-palette"></i> Giao diện / Logo
       </button>
-      <button class="util-btn" onclick="openStatsModal()">
-        <i class="fa-solid fa-chart-pie"></i> Thống kê & Xuất Excel
+      <button id="btnOpenDriveConfigTop" class="util-btn" onclick="openDriveConfigModal()">
+        <i class="fa-solid fa-cloud-bolt"></i> Cấu hình Drive / Cloud
       </button>
-      <button id="currentUserBadge" class="user-role-badge" onclick="openAuthModal()" style="cursor:pointer;" title="Nhấn để chuyển đổi quyền hoặc cấu hình bảo mật">
-        <i class="fa-solid fa-user-shield"></i> Quản trị viên
+      <button id="btnOpenStatsTop" class="util-btn" onclick="openStatsModal()">
+        <i class="fa-solid fa-chart-pie"></i> Thống kê
+      </button>
+      <button id="currentUserBadge" class="user-role-badge" onclick="handleUserButtonClick()">
+        <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập
       </button>
     </div>
   </header>
 
   <!-- ========================================================================
-       BANNER CHÍNH: "TÀI LIỆU SỐ" (CHUẨN GIAO DIỆN ĐH MỞ TP.HCM)
+       BANNER CHÍNH: PHÚC NGUYÊN LIBRARY
        ======================================================================== -->
   <section class="hero-banner">
     <svg class="hero-globe-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="100" cy="100" r="85" stroke="#4a90d9" stroke-width="1.5" stroke-dasharray="4 3"/>
-      <ellipse cx="100" cy="100" rx="45" ry="85" stroke="#4a90d9" stroke-width="1.2"/>
-      <ellipse cx="100" cy="100" rx="85" ry="38" stroke="#4a90d9" stroke-width="1.2"/>
-      <line x1="15" y1="100" x2="185" y2="100" stroke="#4a90d9" stroke-width="1.2"/>
-      <line x1="100" y1="15" x2="100" y2="185" stroke="#4a90d9" stroke-width="1.2"/>
+      <circle cx="100" cy="100" r="85" stroke="#3a66a3" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <ellipse cx="100" cy="100" rx="45" ry="85" stroke="#3a66a3" stroke-width="1.2"/>
+      <ellipse cx="100" cy="100" rx="85" ry="38" stroke="#3a66a3" stroke-width="1.2"/>
+      <line x1="15" y1="100" x2="185" y2="100" stroke="#3a66a3" stroke-width="1.2"/>
+      <line x1="100" y1="15" x2="100" y2="185" stroke="#3a66a3" stroke-width="1.2"/>
     </svg>
-    <h1 class="hero-title">TÀI LIỆU SỐ</h1>
+    <div class="hero-brand-center">
+      <div class="hero-logo-wrap">
+        <div id="heroLogoBadge" class="hero-logo-badge"></div>
+        <h1 id="heroBannerTitle" class="hero-title">PHÚC NGUYÊN LIBRARY</h1>
+      </div>
+      <div id="heroBannerSubtitle" class="hero-subtitle">HỆ THỐNG LƯU TRỮ HỒ SƠ & TÀI LIỆU SỐ</div>
+    </div>
   </section>
 
   <!-- ========================================================================
-       KHUNG NỘI DUNG 2 CỘT: BỘ SƯU TẬP (TRÁI) & DANH MỤC TÀI LIỆU SỐ (PHẢI)
+       KHUNG NỘI DUNG 2 CỘT: BỘ SƯU TẬP ĐA CẤP (TRÁI) & DANH MỤC TÀI LIỆU (PHẢI)
        ======================================================================== -->
   <main class="library-container">
 
-    <!-- CỘT TRÁI: BỘ SƯU TẬP -->
+    <!-- CỘT TRÁI: BỘ SƯU TẬP (HỖ TRỢ THƯ MỤC CON ĐA CẤP) -->
     <aside class="collections-sidebar">
       <div class="section-heading">
         <span>BỘ SƯU TẬP</span>
-        <button id="btnManageCollections" class="sidebar-edit-btn" onclick="openCollectionsManagerModal()" title="Thêm / Sửa danh mục Bộ sưu tập">
-          <i class="fa-solid fa-gear"></i> Quản lý
+        <button id="btnManageCollections" class="sidebar-edit-btn" onclick="openCollectionsManagerModal()" title="Thêm thư mục con hoặc Sửa tên Bộ sưu tập">
+          <i class="fa-solid fa-folder-tree"></i> Quản lý
         </button>
       </div>
 
       <div class="collections-list-wrapper">
         <ul id="collectionsList" class="collections-list">
-          <!-- Render tự động từ js/app.js -->
+          <!-- Render cây thư mục tự động từ js/app.js -->
         </ul>
       </div>
 
@@ -108,7 +117,10 @@
         <span id="currentCollectionSubtitle">DANH MỤC TÀI LIỆU SỐ</span>
       </div>
 
-      <!-- Thanh tìm kiếm chính giống mẫu ĐH Mở TP.HCM -->
+      <!-- Đường dẫn phân cấp thư mục (Breadcrumb) -->
+      <div id="collectionBreadcrumbBar" class="breadcrumb-bar" style="display:none;"></div>
+
+      <!-- Thanh tìm kiếm chính -->
       <div class="search-bar-container">
         <input
           type="text"
@@ -166,14 +178,14 @@
         </button>
       </div>
 
-      <!-- Dòng trạng thái "Tìm được 19 tài liệu" với đường kẻ 2 đầu chấm tròn chuẩn mẫu -->
+      <!-- Dòng trạng thái "Tìm được X tài liệu" -->
       <div class="results-count-banner">
         <span class="line-dot"></span>
         <span>Tìm được <span id="resultsCountNumber" class="results-number">19</span> tài liệu</span>
         <span class="line-dot right"><span class="dot-end"></span></span>
       </div>
 
-      <!-- Thanh công cụ chuyển đổi chế độ xem List / Grid & Nút thêm hồ sơ -->
+      <!-- Thanh công cụ chuyển đổi chế độ xem List / Grid & Nút gắn hồ sơ -->
       <div class="catalog-toolbar">
         <div class="view-mode-buttons">
           <button id="btnViewList" class="view-btn" title="Xem dạng Danh sách">
@@ -185,22 +197,23 @@
         </div>
 
         <div class="toolbar-right-actions">
-          <button id="btnToolbarAddDoc" class="btn-add-doc" onclick="openAddDocumentModal()">
-            <i class="fa-solid fa-plus"></i> Thêm / Upload Hồ sơ mới
+          <button id="btnToolbarLinkDrive" class="btn-add-doc gold-btn" onclick="openAddDocumentModal('drive_link')">
+            <i class="fa-brands fa-google-drive"></i> Gắn tài liệu có sẵn trên Drive
+          </button>
+          <button id="btnToolbarAddDoc" class="btn-add-doc" onclick="openAddDocumentModal('upload_file')">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Tải file mới lên
           </button>
         </div>
       </div>
 
-      <!-- Khu vực hiển thị thẻ tài liệu (5 cột trên Desktop) -->
-      <div id="documentsContainer" class="documents-grid">
-        <!-- Render tự động từ js/app.js -->
-      </div>
+      <!-- Khu vực hiển thị thẻ tài liệu -->
+      <div id="documentsContainer" class="documents-grid"></div>
     </section>
 
   </main>
 
   <!-- ========================================================================
-       MODAL 1: CHI TIẾT HỒ SƠ & TRÌNH XEM TRƯỚC TRỰC TIẾP (GOOGLE DRIVE PREVIEW)
+       MODAL 1: CHI TIẾT HỒ SƠ & TRÌNH XEM TRƯỚC TRỰC TIẾP
        ======================================================================== -->
   <div id="detailModal" class="modal-backdrop">
     <div class="modal-dialog">
@@ -228,38 +241,115 @@
   </div>
 
   <!-- ========================================================================
-       MODAL 2: THÊM MỚI / UPLOAD HỒ SƠ LÊN GOOGLE DRIVE
+       MODAL 2: GẮN TÀI LIỆU CÓ SẴN TRÊN DRIVE / TẢI FILE MỚI & KÉO THẢ ẢNH BÌA
        ======================================================================== -->
   <div id="docFormModal" class="modal-backdrop">
     <div class="modal-dialog modal-md">
       <div class="modal-header">
-        <h3 id="docFormModalTitle"><i class="fa-solid fa-cloud-arrow-up"></i> Thêm / Upload Hồ sơ Mới</h3>
+        <h3 id="docFormModalTitle"><i class="fa-brands fa-google-drive"></i> Gắn Tài liệu từ Google Drive / Tải Hồ sơ Mới</h3>
         <button class="modal-close" onclick="closeModal('docFormModal')">&times;</button>
       </div>
       <form id="docForm">
         <div class="modal-body">
           <input type="hidden" id="docFormId" />
 
-          <div id="uploadDropzone" class="upload-dropzone" style="margin-bottom:14px;">
-            <input type="file" id="docFileInput" style="display:none;" />
-            <div id="uploadDropzoneText"></div>
+          <!-- 3 Tab chọn phương thức: Gắn file có sẵn trên Drive (Không cần tải mới) / Gắn hàng loạt / Upload mới -->
+          <div class="source-mode-tabs" style="grid-template-columns:1fr 1fr 1fr;">
+            <button type="button" class="source-tab-btn active" data-source-mode="drive_link" onclick="setDocSourceMode('drive_link')">
+              <i class="fa-solid fa-link"></i> Gắn từ Google Drive (Không cần tải mới)
+            </button>
+            <button type="button" class="source-tab-btn" data-source-mode="bulk_drive" onclick="setDocSourceMode('bulk_drive')">
+              <i class="fa-solid fa-list-check"></i> Gắn nhiều link Drive cùng lúc
+            </button>
+            <button type="button" class="source-tab-btn" data-source-mode="upload_file" onclick="setDocSourceMode('upload_file')">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Tải file mới từ máy tính
+            </button>
           </div>
-          <div id="uploadStatusText" style="font-size:12.5px;color:var(--ou-blue);margin-bottom:10px;font-weight:500;"></div>
 
-          <div class="form-grid">
+          <!-- PANE 1: GẮN TÀI LIỆU CÓ SẴN TRÊN GOOGLE DRIVE (KHÔNG CẦN TẢI MỚI) -->
+          <div id="paneSourceDriveLink" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:14px;margin-bottom:14px;">
+            <label for="docFormDriveUrl" style="display:block;font-size:13px;font-weight:600;color:var(--pn-primary);margin-bottom:6px;">
+              <i class="fa-brands fa-google-drive" style="color:#1e62d0;"></i> Dán Link hoặc File ID tài liệu đã có sẵn trong Google Drive:
+            </label>
+            <input
+              type="text"
+              id="docFormDriveUrl"
+              class="form-control"
+              style="width:100%;"
+              placeholder="VD: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp.../view?usp=sharing"
+            />
+            <div id="driveLinkCheckStatus" style="font-size:12px;margin-top:6px;"></div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">
+              * Tài liệu đã nằm sẵn trong Google Drive của bạn sẽ được nối trực tiếp vào thư viện mà không phải tải lại file.
+            </div>
+          </div>
+
+          <!-- PANE 2: GẮN HÀNG LOẠT NHIỀU TÀI LIỆU TRONG GOOGLE DRIVE -->
+          <div id="paneSourceBulkDrive" style="display:none;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:14px;margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:10px;">
+              <label for="bulkDocCollection">Chọn Bộ sưu tập / Thư mục đích để gắn hàng loạt:</label>
+              <select id="bulkDocCollection" class="form-control"></select>
+            </div>
             <div class="form-group">
-              <label for="docFormCode">Mã hồ sơ / Số ký hiệu *</label>
-              <input type="text" id="docFormCode" class="form-control" required placeholder="VD: HS-2026-001" />
+              <label for="bulkDriveLinksInput">Danh sách tài liệu Google Drive (Mỗi dòng 1 tài liệu theo cú pháp: <code>Tên tài liệu | Link Google Drive</code> hoặc chỉ cần dán Link):</label>
+              <textarea
+                id="bulkDriveLinksInput"
+                class="form-control"
+                rows="6"
+                placeholder="Giáo trình Quản trị học | https://drive.google.com/file/d/1abc.../view&#10;Báo cáo tổng kết 2026 | https://drive.google.com/file/d/1xyz.../view"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- PANE 3: TẢI FILE MỚI TỪ MÁY TÍNH LÊN GOOGLE DRIVE -->
+          <div id="paneSourceUploadFile" style="display:none;margin-bottom:14px;">
+            <div id="uploadDropzone" class="upload-dropzone">
+              <input type="file" id="docFileInput" style="display:none;" />
+              <div id="uploadDropzoneText"></div>
+            </div>
+            <div id="uploadStatusText" style="font-size:12.5px;color:var(--pn-accent);margin-top:6px;font-weight:500;"></div>
+          </div>
+
+          <!-- THÔNG TIN CHI TIẾT TÀI LIỆU & KÉO THẢ ẢNH BÌA -->
+          <div id="singleDocMetadataFields" class="form-grid">
+            <!-- Vùng Kéo Thả Ảnh Bìa Tài Liệu -->
+            <div class="form-group full-width" style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:6px;">
+              <label style="margin-bottom:6px;"><i class="fa-regular fa-image"></i> Ảnh bìa tài liệu (Kéo thả ảnh trực tiếp vào khung bên dưới để thay đổi ảnh bìa):</label>
+              <div class="cover-dropzone-wrap">
+                <div class="cover-preview-mini">
+                  <div id="formCoverPreviewBox" class="book-3d-frame"></div>
+                </div>
+                <div>
+                  <div id="coverDropzone" class="cover-dropzone">
+                    <input type="file" id="docCoverInput" accept="image/*" style="display:none;" />
+                    <i class="fa-solid fa-images" style="font-size:22px;color:var(--pn-primary);margin-bottom:4px;"></i>
+                    <div style="font-size:13px;font-weight:600;color:var(--pn-primary);">
+                      Kéo và thả hình ảnh bìa vào đây hoặc nhấn để chọn ảnh
+                    </div>
+                    <div style="font-size:11.5px;color:#64748b;margin-top:2px;">
+                      Hỗ trợ JPG, PNG, WebP (Tự động căn chỉnh vừa khung sách 3D)
+                    </div>
+                  </div>
+                  <button type="button" id="btnRemoveCustomCover" class="btn btn-outline" style="display:none;margin-top:6px;padding:4px 10px;font-size:12px;">
+                    <i class="fa-solid fa-rotate-left"></i> Xóa ảnh riêng (Dùng bìa mặc định)
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="form-group">
-              <label for="docFormCollection">Thuộc Bộ sưu tập *</label>
-              <select id="docFormCollection" class="form-control" required></select>
+              <label for="docFormCode">Mã hồ sơ / Số ký hiệu *</label>
+              <input type="text" id="docFormCode" class="form-control" placeholder="VD: PN-2026-001" />
+            </div>
+
+            <div class="form-group">
+              <label for="docFormCollection">Thuộc Bộ sưu tập / Thư mục *</label>
+              <select id="docFormCollection" class="form-control"></select>
             </div>
 
             <div class="form-group full-width">
               <label for="docFormTitle">Tên hồ sơ / Tiêu đề tài liệu *</label>
-              <input type="text" id="docFormTitle" class="form-control" required placeholder="Nhập tên đầy đủ của hồ sơ hoặc sách, tạp chí..." />
+              <input type="text" id="docFormTitle" class="form-control" placeholder="Nhập tên đầy đủ của hồ sơ hoặc sách, tạp chí..." />
             </div>
 
             <div class="form-group">
@@ -290,29 +380,12 @@
             </div>
 
             <div class="form-group full-width">
-              <label for="docFormDriveUrl">
-                <i class="fa-brands fa-google-drive" style="color:#1e62d0;"></i> Link chia sẻ Google Drive hoặc File ID (Nếu file đã có sẵn trên Drive)
-              </label>
-              <input
-                type="text"
-                id="docFormDriveUrl"
-                class="form-control"
-                placeholder="Dán link https://drive.google.com/file/d/... hoặc để trống nếu đã chọn file upload ở trên"
-              />
-            </div>
-
-            <div class="form-group">
               <label for="docFormAccess">Phân quyền truy cập</label>
               <select id="docFormAccess" class="form-control">
-                <option value="public">Công khai (Mọi độc giả đều xem được)</option>
-                <option value="internal">Nội bộ (Phải đăng nhập mới xem được)</option>
-                <option value="admin">Mật / Quản trị (Chỉ Admin & Thủ thư)</option>
+                <option value="public">Công khai (Độc giả vào thư viện đều xem được)</option>
+                <option value="internal">Nội bộ (Chỉ những đối tượng được cấp tài khoản đăng nhập mới xem được)</option>
+                <option value="admin">Mật / Quản trị (Chỉ Quản trị viên & Thủ thư)</option>
               </select>
-            </div>
-
-            <div class="form-group">
-              <label for="docCoverInput">Ảnh bìa tùy chỉnh (Tùy chọn)</label>
-              <input type="file" id="docCoverInput" class="form-control" accept="image/*" style="padding:6px;" />
             </div>
 
             <input type="hidden" id="docFormSize" />
@@ -324,14 +397,14 @@
 
             <div class="form-group full-width">
               <label for="docFormDesc">Tóm tắt nội dung hồ sơ</label>
-              <textarea id="docFormDesc" class="form-control" rows="3" placeholder="Mô tả tóm tắt nội dung chính của hồ sơ để dễ tra cứu..."></textarea>
+              <textarea id="docFormDesc" class="form-control" rows="2" placeholder="Mô tả tóm tắt nội dung chính của hồ sơ..."></textarea>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" onclick="closeModal('docFormModal')">Hủy</button>
           <button type="submit" id="btnSaveDocForm" class="btn btn-primary">
-            <i class="fa-solid fa-floppy-disk"></i> Lưu Hồ sơ & Đồng bộ Google Drive
+            <i class="fa-solid fa-floppy-disk"></i> Lưu Hồ sơ vào Thư viện
           </button>
         </div>
       </form>
@@ -339,44 +412,57 @@
   </div>
 
   <!-- ========================================================================
-       MODAL 3: QUẢN LÝ DANH MỤC "BỘ SƯU TẬP"
+       MODAL 3: QUẢN LÝ BỘ SƯU TẬP (SỬA TÊN & THÊM THƯ MỤC TRONG THƯ MỤC)
        ======================================================================== -->
   <div id="collectionsModal" class="modal-backdrop">
     <div class="modal-dialog modal-md">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-layer-group"></i> Quản lý Danh mục Bộ sưu tập</h3>
+        <h3><i class="fa-solid fa-folder-tree"></i> Quản lý Bộ sưu tập & Cây Thư mục đa cấp</h3>
         <button class="modal-close" onclick="closeModal('collectionsModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <form id="addCollectionForm" style="background:#f8fafc;padding:14px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:16px;">
-          <h4 style="font-size:14px;color:var(--ou-navy);margin-bottom:10px;">+ Thêm Bộ sưu tập / Nhóm hồ sơ mới</h4>
+        <form id="collectionForm" style="background:#f8fafc;padding:14px;border:1px solid #cbd5e1;border-radius:6px;margin-bottom:16px;">
+          <h4 id="colFormHeading" style="font-size:14px;color:var(--pn-primary);margin-bottom:10px;">
+            <i class="fa-solid fa-folder-plus"></i> Thêm Bộ sưu tập / Thư mục con mới
+          </h4>
           <div class="form-grid">
             <div class="form-group">
-              <label for="newColName">Tên Bộ sưu tập *</label>
-              <input type="text" id="newColName" class="form-control" required placeholder="VD: Hồ sơ Nhân sự, Đề tài cấp Bộ..." />
+              <label for="colFormName">Tên Bộ sưu tập / Thư mục *</label>
+              <input type="text" id="colFormName" class="form-control" required placeholder="Nhập tên bộ sưu tập..." />
             </div>
             <div class="form-group">
-              <label for="newColFolderId">ID Thư mục Google Drive (Tùy chọn)</label>
-              <input type="text" id="newColFolderId" class="form-control" placeholder="Link hoặc ID Folder trên Drive..." />
+              <label for="colFormParentId">Nằm trong Thư mục cha (Tạo thư mục trong thư mục)</label>
+              <select id="colFormParentId" class="form-control">
+                <option value="">-- Thư mục gốc (Cấp cao nhất) --</option>
+              </select>
             </div>
-            <div class="form-group full-width">
-              <label for="newColDesc">Mô tả bộ sưu tập</label>
-              <input type="text" id="newColDesc" class="form-control" placeholder="Mô tả ngắn gọn..." />
+            <div class="form-group">
+              <label for="colFormDesc">Mô tả ngắn</label>
+              <input type="text" id="colFormDesc" class="form-control" placeholder="Mô tả nội dung bộ sưu tập..." />
+            </div>
+            <div class="form-group">
+              <label for="colFormFolderId">Link / ID Folder Google Drive (Tùy chọn)</label>
+              <input type="text" id="colFormFolderId" class="form-control" placeholder="ID Folder trên Drive..." />
             </div>
           </div>
-          <div style="margin-top:10px;text-align:right;">
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Thêm vào danh mục</button>
+          <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" id="btnCancelEditCol" class="btn btn-outline" style="display:none;" onclick="resetCollectionForm(null, null)">
+              Hủy sửa
+            </button>
+            <button type="submit" id="btnSubmitColForm" class="btn btn-primary">
+              <i class="fa-solid fa-plus"></i> Thêm vào danh mục
+            </button>
           </div>
         </form>
 
-        <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead>
             <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;text-align:left;">
-              <th style="padding:8px;">Tên Bộ sưu tập</th>
+              <th style="padding:8px;">Cây Bộ sưu tập / Thư mục</th>
+              <th style="padding:8px;">Trực thuộc</th>
               <th style="padding:8px;">Mô tả</th>
-              <th style="padding:8px;">Folder Drive</th>
               <th style="padding:8px;text-align:center;">Số hồ sơ</th>
-              <th style="padding:8px;text-align:right;">Thao tác</th>
+              <th style="padding:8px;text-align:right;">Thao tác (Thêm con / Sửa tên / Xóa)</th>
             </tr>
           </thead>
           <tbody id="collectionsManagerBody"></tbody>
@@ -389,21 +475,204 @@
   </div>
 
   <!-- ========================================================================
-       MODAL 4: CẤU HÌNH KẾT NỐI GOOGLE DRIVE & FIREBASE CLOUD DATABASE
+       MODAL 4: ĐĂNG NHẬP HỆ THỐNG (CHỈ 1 KHUNG ĐĂNG NHẬP, KHÔNG GỢI Ý MẬT KHẨU)
+       ======================================================================== -->
+  <div id="loginModal" class="modal-backdrop">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-lock"></i> Đăng nhập Thư viện</h3>
+        <button class="modal-close" onclick="closeModal('loginModal')">&times;</button>
+      </div>
+      <form id="loginForm">
+        <div class="modal-body">
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-weight:700;font-size:16px;color:var(--pn-primary);">PHÚC NGUYÊN LIBRARY</div>
+            <div style="font-size:12.5px;color:#64748b;">Vui lòng nhập tài khoản được cấp để truy cập</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="loginUsername">Tên đăng nhập</label>
+            <input type="text" id="loginUsername" class="form-control" required autocomplete="username" placeholder="Nhập tên đăng nhập..." />
+          </div>
+
+          <div class="form-group" style="margin-bottom:10px;">
+            <label for="loginPassword">Mật khẩu</label>
+            <input type="password" id="loginPassword" class="form-control" required autocomplete="current-password" placeholder="Nhập mật khẩu..." />
+          </div>
+
+          <div id="loginErrorMsg" style="color:#dc2626;font-size:12.5px;font-weight:500;min-height:18px;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('loginModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Đăng nhập</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 5: QUẢN LÝ & CẤP TÀI KHOẢN CHO TỪNG ĐỐI TƯỢNG XEM THƯ VIỆN (ADMIN)
+       ======================================================================== -->
+  <div id="userManagementModal" class="modal-backdrop">
+    <div class="modal-dialog modal-md">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-users-gear"></i> Quản lý & Cấp Tài khoản Truy cập Thư viện</h3>
+        <button class="modal-close" onclick="closeModal('userManagementModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Chính sách kiểm soát truy cập -->
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:12px 14px;border-radius:6px;margin-bottom:16px;">
+          <h4 style="font-size:13.5px;color:var(--pn-primary);margin-bottom:8px;">
+            <i class="fa-solid fa-shield-halved"></i> Chính sách bảo mật đối với Độc giả truy cập Web:
+          </h4>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;cursor:pointer;">
+            <input type="checkbox" id="chkRequireLoginView" />
+            <span><strong>Bắt buộc đăng nhập mới được vào xem thư viện</strong> (Chỉ những đối tượng được cấp tài khoản dưới đây mới xem được)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="chkRequireLoginDownload" />
+            <span><strong>Bắt buộc đăng nhập mới được tải tài liệu về máy</strong></span>
+          </label>
+        </div>
+
+        <!-- Form Cấp tài khoản mới -->
+        <form id="provisionUserForm" style="background:#f8fafc;border:1px solid #cbd5e1;padding:14px;border-radius:6px;margin-bottom:16px;">
+          <h4 style="font-size:14px;color:var(--pn-primary);margin-bottom:10px;">
+            <i class="fa-solid fa-user-plus"></i> Cấp tài khoản mới cho Độc giả / Cán bộ
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="newUserUsername">Tên đăng nhập cấp *</label>
+              <input type="text" id="newUserUsername" class="form-control" required placeholder="VD: nv_hanhchinh01" />
+            </div>
+            <div class="form-group">
+              <label for="newUserPassword">Mật khẩu khởi tạo *</label>
+              <input type="text" id="newUserPassword" class="form-control" required placeholder="Nhập mật khẩu cấp cho người dùng..." />
+            </div>
+            <div class="form-group">
+              <label for="newUserFullName">Họ và tên người dùng *</label>
+              <input type="text" id="newUserFullName" class="form-control" required placeholder="VD: Trần Văn Bình" />
+            </div>
+            <div class="form-group">
+              <label for="newUserDept">Đơn vị / Phòng ban / Đối tượng</label>
+              <input type="text" id="newUserDept" class="form-control" placeholder="VD: Phòng Đào tạo / Sinh viên K48" />
+            </div>
+            <div class="form-group full-width">
+              <label for="newUserRole">Phân quyền chức năng</label>
+              <select id="newUserRole" class="form-control">
+                <option value="viewer">Độc giả Thư viện (Được phép vào xem & tra cứu tài liệu Công khai + Nội bộ)</option>
+                <option value="editor">Thủ thư / Cán bộ Biên mục (Được phép gắn tài liệu, tải file và quản lý Bộ sưu tập)</option>
+                <option value="admin">Quản trị viên Hệ thống (Toàn quyền quản trị web và cấp tài khoản)</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:10px;text-align:right;">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-check"></i> Cấp tài khoản</button>
+          </div>
+        </form>
+
+        <!-- Danh sách tài khoản đã cấp -->
+        <h4 style="font-size:14px;color:var(--pn-primary);margin-bottom:8px;">Danh sách tài khoản đã cấp quyền:</h4>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;text-align:left;font-size:13px;">
+              <th style="padding:8px;">Tài khoản</th>
+              <th style="padding:8px;">Họ tên & Đơn vị</th>
+              <th style="padding:8px;">Vai trò</th>
+              <th style="padding:8px;text-align:right;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="usersManagerTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('userManagementModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 6: TÙY CHỈNH GIAO DIỆN PHÚC NGUYÊN LIBRARY (CHỮ / MÀU / LOGO)
+       ======================================================================== -->
+  <div id="brandingModal" class="modal-backdrop">
+    <div class="modal-dialog modal-md">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-palette"></i> Tùy chỉnh Giao diện Phúc Nguyên Library (Chữ / Màu / Logo)</h3>
+        <button class="modal-close" onclick="closeModal('brandingModal')">&times;</button>
+      </div>
+      <form id="brandingForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full-width" style="background:#f8fafc;padding:12px;border:1px solid #e2e8f0;border-radius:6px;">
+              <label>Logo Thư viện (Kéo thả file ảnh Logo vào khung bên dưới):</label>
+              <div class="cover-dropzone-wrap" style="grid-template-columns:72px 1fr;">
+                <div id="brandLogoPreviewBox" style="width:68px;height:68px;border-radius:10px;overflow:hidden;border:2px solid var(--pn-gold);background:var(--pn-primary);display:flex;align-items:center;justify-content:center;"></div>
+                <div id="brandLogoDropzone" class="cover-dropzone" style="padding:12px;">
+                  <input type="file" id="brandLogoFileInput" accept="image/*" style="display:none;" />
+                  <div style="font-size:13px;font-weight:600;color:var(--pn-primary);">Kéo thả ảnh Logo Phúc Nguyên Library vào đây hoặc nhấn để chọn</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="brandLibraryName">Tên thương hiệu (Thanh trên cùng & Footer)</label>
+              <input type="text" id="brandLibraryName" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label for="brandBannerTitle">Tiêu đề lớn trên Banner</label>
+              <input type="text" id="brandBannerTitle" class="form-control" required />
+            </div>
+
+            <div class="form-group full-width">
+              <label for="brandBannerSubtitle">Dòng chữ phụ trên Banner</label>
+              <input type="text" id="brandBannerSubtitle" class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="brandPrimaryColor">Màu chủ đạo (Xanh Navy Phúc Nguyên)</label>
+              <input type="color" id="brandPrimaryColor" class="form-control" style="height:40px;padding:4px;" />
+            </div>
+
+            <div class="form-group">
+              <label for="brandGoldColor">Màu điểm nhấn (Vàng đồng Tri thức)</label>
+              <input type="color" id="brandGoldColor" class="form-control" style="height:40px;padding:4px;" />
+            </div>
+
+            <div class="form-group full-width">
+              <label for="brandFontSelect">Phông chữ giao diện</label>
+              <select id="brandFontSelect" class="form-control">
+                <option value="'Be Vietnam Pro', 'Roboto', sans-serif">Be Vietnam Pro (Hiện đại, sắc nét chuẩn tiếng Việt)</option>
+                <option value="'Roboto', 'Segoe UI', sans-serif">Roboto (Tiêu chuẩn, gọn gàng)</option>
+                <option value="'Merriweather', Georgia, serif">Merriweather (Học thuật, cổ điển)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('brandingModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Áp dụng Giao diện</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 7: CẤU HÌNH GOOGLE DRIVE & QUÉT FILE TỰ ĐỘNG
        ======================================================================== -->
   <div id="driveConfigModal" class="modal-backdrop">
     <div class="modal-dialog modal-md">
       <div class="modal-header">
-        <h3><i class="fa-brands fa-google-drive"></i> Kết nối Kho Lưu Trữ Google Drive & Cloud Database</h3>
+        <h3><i class="fa-brands fa-google-drive"></i> Kết nối Kho Google Drive & Đồng bộ Tự động</h3>
         <button class="modal-close" onclick="closeModal('driveConfigModal')">&times;</button>
       </div>
       <form id="driveConfigForm">
         <div class="modal-body">
-          <div style="background:#eff6ff;border-left:4px solid var(--ou-blue);padding:12px 14px;font-size:13px;color:#1e3a8a;margin-bottom:14px;">
-            <strong>Đồng bộ dữ liệu chung khi ban hành Web công khai (GitHub Pages / Firebase):</strong>
+          <div style="background:#eff6ff;border-left:4px solid var(--pn-accent);padding:12px 14px;font-size:13px;color:#1e3a8a;margin-bottom:14px;">
+            <strong>Gắn tài liệu từ Google Drive mà không cần tải mới:</strong>
             <ul style="margin:6px 0 0 18px;line-height:1.55;">
-              <li><strong>Google Apps Script Bridge (Khuyên dùng):</strong> Vừa tự động upload file lên Google Drive, vừa lưu cơ sở dữ liệu danh mục hồ sơ ngay trên Google Drive để mọi người truy cập web đều thấy.</li>
-              <li><strong>Firebase Realtime Database (Tùy chọn):</strong> Lưu cơ sở dữ liệu danh mục hồ sơ thời gian thực trên Firebase.</li>
+              <li><strong>Cách 1 (Dán link trực tiếp):</strong> Vào mục <em>"+ Gắn / Tải Tài liệu Drive"</em>, chọn tab <strong>"Gắn từ Google Drive (Không cần tải mới)"</strong> rồi dán link file hoặc danh sách link.</li>
+              <li><strong>Cách 2 (Quét tự động cả thư mục Drive):</strong> Nhập ID thư mục gốc Google Drive và URL Google Apps Script bên dưới, sau đó nhấn nút <strong>"Quét tự động từ Drive"</strong> để hệ thống tự lấy toàn bộ file có sẵn trong Drive lên web.</li>
             </ul>
           </div>
 
@@ -418,7 +687,7 @@
           </div>
 
           <div class="form-group" style="margin-bottom:12px;">
-            <label for="cfgGasUrl">2. URL Google Apps Script Web App (Upload file + Lưu CSDL trên Google Drive)</label>
+            <label for="cfgGasUrl">2. URL Google Apps Script Web App (Quét thư mục Drive + Lưu CSDL chung)</label>
             <div style="display:flex;gap:8px;">
               <input
                 type="text"
@@ -427,15 +696,14 @@
                 style="flex:1;"
                 placeholder="VD: https://script.google.com/macros/s/AKfycb.../exec"
               />
-              <button type="button" id="btnScanDriveFolder" class="btn btn-outline" onclick="handleScanDriveFolderNow()" title="Quét toàn bộ thư mục con và file có sẵn trong Google Drive để đưa vào thư viện">
-                <i class="fa-solid fa-folder-tree"></i> Quét tự động từ Drive
+              <button type="button" id="btnScanDriveFolder" class="btn btn-outline" onclick="handleScanDriveFolderNow()">
+                <i class="fa-solid fa-folder-tree"></i> Quét tự động các File có sẵn từ Drive
               </button>
             </div>
-            <span style="font-size:12px;color:#64748b;">Mã nguồn đã tạo sẵn tại file <code>google-apps-script/Code.gs</code> trong thư mục dự án.</span>
           </div>
 
           <div class="form-group" style="margin-bottom:12px;">
-            <label for="cfgFirebaseUrl">3. URL Firebase Realtime Database (Nếu dùng Firebase làm CSDL chung)</label>
+            <label for="cfgFirebaseUrl">3. URL Firebase Realtime Database (Tùy chọn)</label>
             <input
               type="text"
               id="cfgFirebaseUrl"
@@ -445,7 +713,7 @@
           </div>
 
           <div class="form-group">
-            <label for="cfgAccessToken">4. Google Drive API v3 OAuth Access Token (Tùy chọn nâng cao)</label>
+            <label for="cfgAccessToken">4. Google Drive API v3 OAuth Access Token (Tùy chọn)</label>
             <input
               type="password"
               id="cfgAccessToken"
@@ -455,12 +723,12 @@
           </div>
         </div>
         <div class="modal-footer" style="justify-content:space-between;">
-          <button type="button" class="btn btn-outline" onclick="downloadCloudConfigFile()" title="Tải file cloud-config.js chứa cấu hình này để đưa lên GitHub / Firebase">
-            <i class="fa-solid fa-file-code"></i> Xuất file cloud-config.js (Cho Web công khai)
+          <button type="button" class="btn btn-outline" onclick="downloadCloudConfigFile()">
+            <i class="fa-solid fa-file-code"></i> Xuất file cloud-config.js
           </button>
           <div style="display:flex;gap:8px;">
             <button type="button" class="btn btn-outline" onclick="closeModal('driveConfigModal')">Đóng</button>
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Lưu & Đồng bộ Cloud</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Lưu cấu hình</button>
           </div>
         </div>
       </form>
@@ -468,7 +736,7 @@
   </div>
 
   <!-- ========================================================================
-       MODAL 5: THỐNG KÊ LƯỢT XEM / TẢI & SAO LƯU DỮ LIỆU
+       MODAL 8: THỐNG KÊ LƯỢT XEM / TẢI & SAO LƯU DỮ LIỆU
        ======================================================================== -->
   <div id="statsModal" class="modal-backdrop">
     <div class="modal-dialog modal-md">
@@ -497,11 +765,11 @@
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <h4 style="font-size:15px;color:var(--ou-navy);">Top Hồ sơ được tra cứu & tải nhiều nhất</h4>
+          <h4 style="font-size:15px;color:var(--pn-primary);">Top Hồ sơ được tra cứu & tải nhiều nhất</h4>
           <div style="display:flex;gap:8px;">
             <button class="btn btn-success" onclick="exportCatalogCSV()"><i class="fa-solid fa-file-excel"></i> Xuất Excel (CSV)</button>
             <button class="btn btn-outline" onclick="exportBackupJSON()"><i class="fa-solid fa-download"></i> Sao lưu JSON</button>
-            <button id="btnResetDefaultData" class="btn btn-outline" title="Khôi phục dữ liệu mẫu ban đầu"><i class="fa-solid fa-rotate"></i> Reset mẫu</button>
+            <button id="btnResetDefaultData" class="btn btn-outline"><i class="fa-solid fa-rotate"></i> Reset mẫu</button>
           </div>
         </div>
 
@@ -524,98 +792,13 @@
     </div>
   </div>
 
-  <!-- ========================================================================
-       MODAL 6: QUẢN LÝ PHÂN QUYỀN & CHUYỂN ĐỔI TÀI KHOẢN
-       ======================================================================== -->
-  <div id="authModal" class="modal-backdrop">
-    <div class="modal-dialog modal-sm">
-      <div class="modal-header">
-        <h3><i class="fa-solid fa-user-lock"></i> Phân quyền Truy cập & Tài khoản</h3>
-        <button class="modal-close" onclick="closeModal('authModal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <h4 style="font-size:14px;color:var(--ou-navy);margin-bottom:10px;">Chuyển đổi vai trò (Có bảo vệ mật khẩu trên Web công khai):</h4>
-        <div id="roleSwitchList"></div>
-
-        <div style="margin-top:8px;">
-          <button class="btn btn-outline" style="width:100%;justify-content:center;" onclick="switchUserRole('')">
-            <i class="fa-regular fa-user"></i> Chuyển sang chế độ Độc giả công khai (Guest)
-          </button>
-        </div>
-
-        <hr style="margin:16px 0;border:none;border-top:1px solid #e2e8f0;" />
-
-        <h4 style="font-size:14px;color:var(--ou-navy);margin-bottom:10px;">Chính sách bảo mật Thư viện Hồ sơ:</h4>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:8px;cursor:pointer;">
-          <input type="checkbox" id="chkRequireLoginView" />
-          <span>Bắt buộc đăng nhập mới được xem danh mục hồ sơ</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;">
-          <input type="checkbox" id="chkRequireLoginDownload" />
-          <span>Bắt buộc đăng nhập mới được tải file về máy</span>
-        </label>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('authModal')">Đóng</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================
-       MODAL 7: HƯỚNG DẪN BAN HÀNH WEB CÔNG KHAI (GITHUB PAGES / FIREBASE)
-       ======================================================================== -->
-  <div id="deployGuideModal" class="modal-backdrop">
-    <div class="modal-dialog modal-md">
-      <div class="modal-header">
-        <h3><i class="fa-solid fa-globe"></i> Hướng dẫn Ban hành Web Công khai (GitHub Pages & Firebase)</h3>
-        <button class="modal-close" onclick="closeModal('deployGuideModal')">&times;</button>
-      </div>
-      <div class="modal-body" style="font-size:13.5px;line-height:1.65;color:#1e293b;">
-        <div style="background:#ecfdf5;border:1px solid #6ee7b7;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
-          <strong style="color:#065f46;"><i class="fa-solid fa-circle-check"></i> Dự án đã được cấu hình sẵn sàng 100% để ban hành công khai!</strong>
-          <div style="color:#047857;margin-top:4px;">
-            Đã tích hợp sẵn file cấu hình <code>.github/workflows/deploy.yml</code> (cho GitHub Pages), <code>firebase.json</code> (cho Firebase Hosting) và <code>js/cloud-config.js</code> (đồng bộ CSDL đám mây).
-          </div>
-        </div>
-
-        <h4 style="color:var(--ou-navy);font-size:15px;margin-bottom:6px;">
-          <i class="fa-brands fa-github"></i> Cách 1: Ban hành miễn phí bằng tài khoản GitHub (Không cần cài phần mềm - 2 phút)
-        </h4>
-        <ol style="margin-left:20px;margin-bottom:16px;">
-          <li>Đăng nhập vào <a href="https://github.com/new" target="_blank" rel="noopener"><strong>github.com/new</strong></a> để tạo 1 Repository mới (ví dụ đặt tên: <code>thu-vien-ho-so</code>, chọn <strong>Public</strong>).</li>
-          <li>Nhấn vào dòng <strong>"uploading an existing file"</strong> trên màn hình GitHub.</li>
-          <li>Kéo thả toàn bộ các file và thư mục trong <code>h:\Drive của tôi\12. ANTIGRAV</code> (gồm <code>index.html</code>, thư mục <code>css</code>, <code>js</code>, <code>.github</code>) vào cửa sổ trình duyệt rồi nhấn <strong>Commit changes</strong>.</li>
-          <li>Vào mục <strong>Settings</strong> của Repository &rarr; chọn <strong>Pages</strong> (menu bên trái) &rarr; ở mục <em>Build and deployment (Source)</em> chọn <strong>Deploy from a branch</strong> &rarr; nhánh <strong>main</strong> &rarr; nhấn <strong>Save</strong>.</li>
-          <li>Sau 30 giây, bạn sẽ nhận được đường link công khai vĩnh viễn: <code>https://&lt;ten-ban&gt;.github.io/thu-vien-ho-so/</code></li>
-        </ol>
-
-        <h4 style="color:var(--ou-navy);font-size:15px;margin-bottom:6px;">
-          <i class="fa-solid fa-fire" style="color:#f59e0b;"></i> Cách 2: Kết nối Cơ sở dữ liệu chung trên Firebase hoặc Google Drive
-        </h4>
-        <p style="margin-bottom:8px;">
-          Để khi bạn thêm/sửa hồ sơ trên web công khai thì mọi người truy cập từ máy khác đều thấy ngay:
-        </p>
-        <ul style="margin-left:20px;margin-bottom:12px;">
-          <li><strong>Dùng Google Drive làm CSDL chung:</strong> Dán mã trong file <code>google-apps-script/Code.gs</code> lên <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a> &rarr; Bấm <em>Triển khai (Ứng dụng Web)</em> &rarr; Dán URL vào biến <code>gasWebAppUrl</code> trong file <code>js/cloud-config.js</code>.</li>
-          <li><strong>Hoặc dùng Firebase Realtime Database:</strong> Vào <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> &rarr; Tạo Project &rarr; Bật <strong>Realtime Database</strong> (chế độ Test Mode) &rarr; Copy đường link <code>https://...-default-rtdb.firebaseio.com</code> dán vào biến <code>firebaseDbUrl</code> trong file <code>js/cloud-config.js</code>.</li>
-        </ul>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" onclick="closeModal('deployGuideModal'); openDriveConfigModal();">
-          <i class="fa-solid fa-gear"></i> Mở Cấu hình Cloud & Xuất file cloud-config.js
-        </button>
-        <button class="btn btn-outline" onclick="closeModal('deployGuideModal')">Đóng</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Thông báo nổi (Toast) -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Footer -->
   <footer class="library-footer">
-    <strong>HỆ THỐNG LƯU TRỮ HỒ SƠ & THƯ VIỆN SỐ KẾT NỐI GOOGLE DRIVE</strong> &bull;
-    Giao diện tham khảo Thư viện số Trường Đại học Mở TP.HCM
+    <strong id="footerBrandName">PHÚC NGUYÊN LIBRARY</strong> &bull;
+    Hệ thống Lưu trữ Hồ sơ & Thư viện Số kết nối Google Drive
   </footer>
 
   <!-- Scripts -->
