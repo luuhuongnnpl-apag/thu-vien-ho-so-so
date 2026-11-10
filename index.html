@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PHÚC NGUYÊN LIBRARY - Hệ Thống Lưu Trữ Hồ Sơ & Thư Viện Số</title>
+  <link rel="icon" type="image/png" href="logo.png" />
   <!-- Google Fonts: Be Vietnam Pro & Merriweather -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -197,6 +198,9 @@
         </div>
 
         <div class="toolbar-right-actions">
+          <button id="btnToolbarSyncDrive" class="btn-add-doc" style="background:#0f766e;" onclick="handleScanDriveFolderNow()" title="Quét và cập nhật tự động các file/thư mục mới từ Google Drive">
+            <i class="fa-solid fa-arrows-rotate"></i> Đồng bộ Drive
+          </button>
           <button id="btnToolbarLinkDrive" class="btn-add-doc gold-btn" onclick="openAddDocumentModal('drive_link')">
             <i class="fa-brands fa-google-drive"></i> Gắn tài liệu có sẵn trên Drive
           </button>
@@ -468,7 +472,10 @@
           <tbody id="collectionsManagerBody"></tbody>
         </table>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button type="button" class="btn btn-danger" onclick="handleClearAllLibraryData()">
+          <i class="fa-solid fa-trash-can"></i> Xóa trắng toàn bộ Thư mục & Tài liệu
+        </button>
         <button class="btn btn-outline" onclick="closeModal('collectionsModal')">Đóng</button>
       </div>
     </div>
