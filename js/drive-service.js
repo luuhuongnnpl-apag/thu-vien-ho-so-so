@@ -1,10 +1,10 @@
 /* ==========================================================================
-   DỊCH VỤ KẾT NỐI GOOGLE DRIVE & ĐỒNG BỘ CLOUD (GITHUB PAGES / FIREBASE)
+   DỊCH VỤ KẾT NỐI GOOGLE DRIVE & ĐỒNG BỘ TỰ ĐỘNG (PHÚC NGUYÊN LIBRARY)
    ========================================================================== */
 
 const DriveService = {
-  configKey: 'ou_library_drive_config',
-  dbName: 'OULibraryLocalFilesDB',
+  configKey: 'pn_library_drive_config_v3',
+  dbName: 'PNLibraryLocalFilesDB',
   storeName: 'files',
 
   getConfig() {
@@ -17,7 +17,7 @@ const DriveService = {
       apiKey: '',
       clientId: '',
       accessToken: '',
-      autoCreateCollectionFolder: true
+      autoSyncDrive: true
     };
 
     const saved = localStorage.getItem(this.configKey);
@@ -27,7 +27,6 @@ const DriveService = {
         return {
           ...defaults,
           ...parsed,
-          // Ưu tiên cấu hình cứng trong cloud-config.js nếu localStorage đang trống
           rootFolderId: parsed.rootFolderId || defaults.rootFolderId,
           gasWebAppUrl: parsed.gasWebAppUrl || defaults.gasWebAppUrl,
           firebaseDbUrl: parsed.firebaseDbUrl || defaults.firebaseDbUrl
@@ -49,14 +48,17 @@ const DriveService = {
     );
   },
 
-  // Tải danh mục Hồ sơ & Bộ sưu tập chung từ Cloud (Firebase Realtime DB hoặc Google Drive DB)
+  hasDriveAutoScan() {
+    const cfg = this.getConfig();
+    return Boolean(cfg.gasWebAppUrl && cfg.gasWebAppUrl.startsWith('https://script.google.com'));
+  },
+
   async fetchCloudCatalog() {
     const cfg = this.getConfig();
 
-    // 1. Ưu tiên Firebase Realtime Database nếu người dùng cấu hình Firebase URL
     if (cfg.firebaseDbUrl && cfg.firebaseDbUrl.startsWith('https://')) {
       const baseUrl = cfg.firebaseDbUrl.replace(/\/+$/, '');
-      const resp = await fetch(`${baseUrl}/ou_library_catalog.json`, { cache: 'no-store' });
+      const resp = await fetch(`${baseUrl}/pn_library_catalog.json?_t=${Date.now()}`, { cache: 'no-store' });
       if (resp.ok) {
         const data = await resp.json();
         if (data && (data.documents || data.collections)) {
@@ -65,11 +67,10 @@ const DriveService = {
       }
     }
 
-    // 2. Hoặc tải từ Google Drive thông qua Google Apps Script Web App
     if (cfg.gasWebAppUrl && cfg.gasWebAppUrl.startsWith('https://script.google.com')) {
       const folderId = this.extractFileId(cfg.rootFolderId) || cfg.rootFolderId || '';
       const url = `${cfg.gasWebAppUrl}?action=get_catalog&rootFolderId=${encodeURIComponent(folderId)}&_t=${Date.now()}`;
-      const resp = await fetch(url);
+      const resp = await fetch(url, { cache: 'no-store' });
       if (resp.ok) {
         const res = await resp.json();
         if (res && res.success && !res.empty && res.catalog) {
@@ -81,16 +82,14 @@ const DriveService = {
     return null;
   },
 
-  // Lưu danh mục Hồ sơ & Bộ sưu tập lên Cloud để mọi người truy cập web công khai đều thấy
   async pushCloudCatalog(catalogData) {
     const cfg = this.getConfig();
     const results = [];
 
-    // 1. Lưu lên Firebase Realtime Database (nếu có)
     if (cfg.firebaseDbUrl && cfg.firebaseDbUrl.startsWith('https://')) {
       try {
         const baseUrl = cfg.firebaseDbUrl.replace(/\/+$/, '');
-        await fetch(`${baseUrl}/ou_library_catalog.json`, {
+        await fetch(`${baseUrl}/pn_library_catalog.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -104,7 +103,6 @@ const DriveService = {
       }
     }
 
-    // 2. Lưu lên Google Drive thông qua Google Apps Script Bridge (nếu có)
     if (cfg.gasWebAppUrl && cfg.gasWebAppUrl.startsWith('https://script.google.com')) {
       try {
         const folderId = this.extractFileId(cfg.rootFolderId) || cfg.rootFolderId || '';
@@ -132,7 +130,7 @@ const DriveService = {
   async scanGoogleDriveFolder() {
     const cfg = this.getConfig();
     if (!cfg.gasWebAppUrl || !cfg.gasWebAppUrl.startsWith('https://script.google.com')) {
-      throw new Error('Vui lòng nhập URL Google Apps Script Web App trong phần Cấu hình trước khi quét thư mục Drive.');
+      throw new Error('Để web tự động quét file từ Google Drive, vui lòng nhập URL Google Apps Script Web App trong phần Cấu hình Drive / Cloud.');
     }
     const folderId = this.extractFileId(cfg.rootFolderId) || cfg.rootFolderId || '';
     const resp = await fetch(cfg.gasWebAppUrl, {
@@ -149,7 +147,6 @@ const DriveService = {
     return data;
   },
 
-  // Trích xuất Google Drive File ID từ bất kỳ định dạng link Google Drive / Docs / Sheets / Slides nào
   extractFileId(input) {
     if (!input) return '';
     const trimmed = input.trim();
@@ -349,37 +346,39 @@ const DriveService = {
       };
     }
 
-    // 3. Thử lưu vào thư mục Google Drive Desktop qua Local Server (node server.js)
-    try {
-      statusCb('Đang kiểm tra kết nối ổ đĩa Google Drive Desktop...');
-      const base64Data = await this.fileToBase64(file);
-      const resp = await fetch('/api/upload-drive-local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          collectionId: metadata.collectionId || 'chung',
-          base64Data
-        })
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.success) {
-          return {
-            mode: 'local_drive_folder',
-            driveFileId: '',
-            driveUrl: data.fileUrl,
-            localFileUrl: data.fileUrl,
-            savedPath: data.savedPath,
-            fileSize: this.formatBytes(file.size),
-            fileType: this.detectFileType(file.name, file.type)
-          };
+    // 3. Chỉ gọi Local Server khi đang chạy trên localhost (tránh treo khi chạy trên GitHub Pages)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      try {
+        statusCb('Đang lưu vào ổ đĩa Google Drive Desktop...');
+        const base64Data = await this.fileToBase64(file);
+        const resp = await fetch('/api/upload-drive-local', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            collectionId: metadata.collectionId || 'chung',
+            base64Data
+          })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success) {
+            return {
+              mode: 'local_drive_folder',
+              driveFileId: '',
+              driveUrl: data.fileUrl,
+              localFileUrl: data.fileUrl,
+              savedPath: data.savedPath,
+              fileSize: this.formatBytes(file.size),
+              fileType: this.detectFileType(file.name, file.type)
+            };
+          }
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
 
-    // 4. Lưu vào IndexedDB của trình duyệt
-    statusCb('Đang lưu trữ hồ sơ vào bộ nhớ trình duyệt & tạo bản xem trước...');
+    // 4. Lưu vào IndexedDB của trình duyệt ngay lập tức
+    statusCb('Đang lưu trữ hồ sơ và tạo bản xem trước...');
     const localId = 'local-file-' + Date.now();
     await this.saveBlobToIndexedDB(localId, file);
     const blobUrl = URL.createObjectURL(file);
