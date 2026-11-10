@@ -1,44 +1,71 @@
 /* ==========================================================================
-   DỮ LIỆU MẪU & CẤU HÌNH MẶC ĐỊNH (THƯ VIỆN SỐ & HỒ SƠ GOOGLE DRIVE)
+   DỮ LIỆU MẪU & CẤU HÌNH THƯƠNG HIỆU PHÚC NGUYÊN LIBRARY
    ========================================================================== */
 
-// Biểu tượng sách xanh dương đặc trưng trên bìa sách 3D (giống mẫu ĐH Mở TP.HCM)
-const OU_BOOK_EMBLEM_SVG = `
-<svg class="ou-book-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Trang sách đứng -->
-  <path d="M46 24 L46 86 C54 82 62 82 68 86 L68 24 C62 20 54 20 46 24 Z" fill="#1338be"/>
-  <path d="M71 28 L71 88 C78 83 85 83 91 86 L91 26 C85 23 78 23 71 28 Z" fill="#1e4fd8"/>
-  <!-- Vòng quỹ đạo xoay quanh sách -->
-  <path d="M22 76 C12 62 26 42 56 32 C84 23 108 28 104 44 C101 55 82 67 58 74 C78 65 93 53 94 43 C95 33 75 30 53 38 C31 46 19 61 28 71 C34 77 48 79 65 76 L62 82 C42 85 27 83 22 76 Z" fill="#1338be"/>
-  <!-- Đế mở trang sách bên dưới -->
-  <path d="M36 92 C48 85 60 88 68 95 C76 88 88 85 100 92 C88 90 76 93 68 100 C60 93 48 90 36 92 Z" fill="#1338be"/>
+// Logo biểu trưng Phúc Nguyên Library (Sách mở + Chữ PN Vàng đồng trên nền Xanh Navy)
+const PHUC_NGUYEN_LOGO_SVG = `
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+  <rect width="100" height="100" rx="18" fill="#1b365d"/>
+  <circle cx="50" cy="50" r="42" stroke="#c59b27" stroke-width="2" stroke-dasharray="4 2" opacity="0.75"/>
+  <!-- Trang sách mở dưới chân -->
+  <path d="M20 68 C32 60 44 63 50 70 C56 63 68 60 80 68 L80 76 C68 69 56 72 50 79 C44 72 32 69 20 76 Z" fill="#c59b27"/>
+  <path d="M24 62 C34 55 44 58 50 64 C56 58 66 55 76 62" stroke="#f4e8c1" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Chữ PN (Phúc Nguyên) -->
+  <text x="50" y="51" text-anchor="middle" fill="#ffffff" font-family="Merriweather, Georgia, serif" font-weight="700" font-size="28" letter-spacing="1">PN</text>
+  <!-- Ngôi sao tri thức phía trên -->
+  <polygon points="50,12 52.5,18 59,18.5 54,22.5 55.5,28.5 50,25 44.5,28.5 46,22.5 41,18.5 47.5,18" fill="#c59b27"/>
 </svg>
 `;
 
+// Biểu tượng sách trên bìa sách 3D mặc định của tài liệu
+const OU_BOOK_EMBLEM_SVG = `
+<svg class="ou-book-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M46 24 L46 86 C54 82 62 82 68 86 L68 24 C62 20 54 20 46 24 Z" fill="#1b365d"/>
+  <path d="M71 28 L71 88 C78 83 85 83 91 86 L91 26 C85 23 78 23 71 28 Z" fill="#2b548e"/>
+  <path d="M22 76 C12 62 26 42 56 32 C84 23 108 28 104 44 C101 55 82 67 58 74 C78 65 93 53 94 43 C95 33 75 30 53 38 C31 46 19 61 28 71 C34 77 48 79 65 76 L62 82 C42 85 27 83 22 76 Z" fill="#c59b27"/>
+  <path d="M36 92 C48 85 60 88 68 95 C76 88 88 85 100 92 C88 90 76 93 68 100 C60 93 48 90 36 92 Z" fill="#1b365d"/>
+</svg>
+`;
+
+const DEFAULT_BRANDING = {
+  libraryName: 'PHÚC NGUYÊN LIBRARY',
+  bannerTitle: 'PHÚC NGUYÊN LIBRARY',
+  bannerSubtitle: 'HỆ THỐNG LƯU TRỮ HỒ SƠ & TÀI LIỆU SỐ',
+  primaryColor: '#1b365d',
+  goldColor: '#c59b27',
+  fontFamily: "'Be Vietnam Pro', 'Roboto', sans-serif",
+  logoDataUrl: ''
+};
+
+// Danh sách Bộ sưu tập hỗ trợ phân cấp Thư mục cha - Thư mục con (parentId)
 const DEFAULT_COLLECTIONS = [
-  { id: 'all', name: 'Tất cả bộ sưu tập', description: 'Toàn bộ hồ sơ và tài liệu số trong kho lưu trữ', driveFolderId: '' },
-  { id: 'bai-trich', name: 'Bài trích', description: 'Bài trích báo, tạp chí chuyên ngành và hồ sơ chuyên đề', driveFolderId: '' },
-  { id: 'bao-tap-chi', name: 'Báo - Tạp chí', description: 'Ấn phẩm định kỳ, tạp chí khoa học trong và ngoài nước', driveFolderId: '' },
-  { id: 'bao-cao-khoa-hoc', name: 'Báo cáo khoa học', description: 'Báo cáo tổng kết đề tài, hồ sơ nghiệm thu khoa học', driveFolderId: '' },
-  { id: 'cd-multimedia', name: 'CD / Đa phương tiện', description: 'Tài liệu âm thanh, video, đĩa CD/DVD số hóa', driveFolderId: '' },
-  { id: 'cong-trinh-nghien-cuu', name: 'Công trình nghiên cứu', description: 'Công trình nghiên cứu cấp trường, cấp bộ và hồ sơ dự án', driveFolderId: '' },
-  { id: 'hinh-anh-hoat-dong', name: 'Hình ảnh hoạt động của trường', description: 'Kho tư liệu hình ảnh sự kiện, hội nghị, lễ kỷ niệm', driveFolderId: '' },
-  { id: 'khoa-luan', name: 'Khóa luận', description: 'Khóa luận tốt nghiệp đại học các chuyên ngành', driveFolderId: '' },
-  { id: 'luan-an', name: 'Luận án', description: 'Luận án Tiến sĩ và hồ sơ bảo vệ cấp nhà nước', driveFolderId: '' },
-  { id: 'luan-van', name: 'Luận văn', description: 'Luận văn Thạc sĩ và hồ sơ nghiên cứu sau đại học', driveFolderId: '' },
-  { id: 'sach-giao-trinh', name: 'Sách - Giáo trình', description: 'Giáo trình đào tạo nội bộ và sách chuyên khảo', driveFolderId: '' },
-  { id: 'sach-tham-khao', name: 'Sách tham khảo', description: 'Tài liệu, sách tham khảo phục vụ tra cứu chuyên môn', driveFolderId: '' },
-  { id: 'tai-lieu-hoi-nghi', name: 'Tài liệu Hội nghị Hội thảo', description: 'Kỷ yếu hội thảo quốc gia, quốc tế và biên bản họp', driveFolderId: '' },
-  { id: 'tai-lieu-lms', name: 'Tài liệu LMS', description: 'Bài giảng điện tử, học liệu số kết nối hệ thống LMS', driveFolderId: '' },
-  { id: 'ho-so-hanh-chinh', name: 'Hồ sơ Hành chính - Pháp lý', description: 'Quyết định, công văn, tờ trình, hợp đồng lưu trữ trên Drive', driveFolderId: '' }
+  { id: 'all', name: 'Tất cả bộ sưu tập', parentId: null, description: 'Toàn bộ hồ sơ và tài liệu số trong kho lưu trữ', driveFolderId: '' },
+  { id: 'bai-trich', name: 'Bài trích', parentId: null, description: 'Bài trích báo, tạp chí chuyên ngành và hồ sơ chuyên đề', driveFolderId: '' },
+  { id: 'bao-tap-chi', name: 'Báo - Tạp chí', parentId: null, description: 'Ấn phẩm định kỳ, tạp chí khoa học trong và ngoài nước', driveFolderId: '' },
+  { id: 'tap-chi-quoc-te', name: 'Tạp chí Quốc tế (TESOL / Wiley)', parentId: 'bao-tap-chi', description: 'Tạp chí quốc tế chuyên ngành bằng tiếng Anh', driveFolderId: '' },
+  { id: 'tap-chi-trong-nuoc', name: 'Tạp chí Khoa học Trong nước', parentId: 'bao-tap-chi', description: 'Tạp chí chuyên ngành xuất bản trong nước', driveFolderId: '' },
+  { id: 'bao-cao-khoa-hoc', name: 'Báo cáo khoa học', parentId: null, description: 'Báo cáo tổng kết đề tài, hồ sơ nghiệm thu khoa học', driveFolderId: '' },
+  { id: 'cd-multimedia', name: 'CD / Đa phương tiện', parentId: null, description: 'Tài liệu âm thanh, video, đĩa CD/DVD số hóa', driveFolderId: '' },
+  { id: 'cong-trinh-nghien-cuu', name: 'Công trình nghiên cứu', parentId: null, description: 'Công trình nghiên cứu cấp trường, cấp bộ và hồ sơ dự án', driveFolderId: '' },
+  { id: 'hinh-anh-hoat-dong', name: 'Hình ảnh hoạt động', parentId: null, description: 'Kho tư liệu hình ảnh sự kiện, hội nghị, lễ kỷ niệm', driveFolderId: '' },
+  { id: 'khoa-luan', name: 'Khóa luận', parentId: null, description: 'Khóa luận tốt nghiệp đại học các chuyên ngành', driveFolderId: '' },
+  { id: 'luan-an', name: 'Luận án', parentId: null, description: 'Luận án Tiến sĩ và hồ sơ bảo vệ cấp nhà nước', driveFolderId: '' },
+  { id: 'luan-van', name: 'Luận văn', parentId: null, description: 'Luận văn Thạc sĩ và hồ sơ nghiên cứu sau đại học', driveFolderId: '' },
+  { id: 'sach-giao-trinh', name: 'Sách - Giáo trình', parentId: null, description: 'Giáo trình đào tạo nội bộ và sách chuyên khảo', driveFolderId: '' },
+  { id: 'sach-tham-khao', name: 'Sách tham khảo', parentId: null, description: 'Tài liệu, sách tham khảo phục vụ tra cứu chuyên môn', driveFolderId: '' },
+  { id: 'tai-lieu-hoi-nghi', name: 'Tài liệu Hội nghị Hội thảo', parentId: null, description: 'Kỷ yếu hội thảo quốc gia, quốc tế và biên bản họp', driveFolderId: '' },
+  { id: 'tai-lieu-lms', name: 'Tài liệu LMS', parentId: null, description: 'Bài giảng điện tử, học liệu số kết nối hệ thống LMS', driveFolderId: '' },
+  { id: 'ho-so-hanh-chinh', name: 'Hồ sơ Hành chính - Pháp lý', parentId: null, description: 'Quyết định, công văn, tờ trình, hợp đồng lưu trữ trên Drive', driveFolderId: '' },
+  { id: 'ho-so-quyet-dinh', name: 'Quyết định & Quy chế', parentId: 'ho-so-hanh-chinh', description: 'Các quyết định, quy chế quản lý nội bộ', driveFolderId: '' },
+  { id: 'ho-so-hop-dong', name: 'Hồ sơ Hợp đồng & Dự án', parentId: 'ho-so-hanh-chinh', description: 'Hồ sơ hợp đồng, biên bản nghiệm thu', driveFolderId: '' }
 ];
 
 const DEFAULT_DOCUMENTS = [
   {
     id: 'doc-01',
-    code: 'HS-TC-2026-001',
+    code: 'PN-TC-2026-001',
     title: 'TESOL Quarterly NJ, U.S.A : John Wiley & Sons - Vol. 58 Issue 1',
-    collectionId: 'bao-tap-chi',
+    collectionId: 'tap-chi-quoc-te',
     author: 'John Wiley & Sons (TESOL International Association)',
     year: 2026,
     pages: 14,
@@ -56,9 +83,9 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-02',
-    code: 'HS-TC-2026-002',
+    code: 'PN-TC-2026-002',
     title: 'TESOL Quarterly NJ, U.S.A : John Wiley & Sons - Vol. 58 Issue 2',
-    collectionId: 'bao-tap-chi',
+    collectionId: 'tap-chi-quoc-te',
     author: 'John Wiley & Sons',
     year: 2026,
     pages: 14,
@@ -76,9 +103,9 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-03',
-    code: 'HS-TC-2026-003',
+    code: 'PN-TC-2026-003',
     title: 'TESOL Quarterly NJ, U.S.A : John Wiley & Sons - Vol. 58 Issue 3',
-    collectionId: 'bao-tap-chi',
+    collectionId: 'tap-chi-quoc-te',
     author: 'John Wiley & Sons',
     year: 2025,
     pages: 12,
@@ -96,9 +123,9 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-04',
-    code: 'HS-TC-2026-004',
+    code: 'PN-TC-2026-004',
     title: 'TESOL Quarterly NJ, U.S.A : John Wiley & Sons - Vol. 58 Issue 4',
-    collectionId: 'bao-tap-chi',
+    collectionId: 'tap-chi-quoc-te',
     author: 'John Wiley & Sons',
     year: 2025,
     pages: 13,
@@ -116,7 +143,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-05',
-    code: 'HS-TC-2026-005',
+    code: 'PN-TC-2026-005',
     title: 'TESOL Quarterly NJ, U.S.A : John Wiley & Sons - Special Issue',
     collectionId: 'bao-tap-chi',
     author: 'John Wiley & Sons',
@@ -136,7 +163,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-06',
-    code: 'HS-BC-2026-006',
+    code: 'PN-BC-2026-006',
     title: 'Báo cáo tổng kết công tác chuyển đổi số và lưu trữ hồ sơ điện tử giai đoạn 2024 - 2026',
     collectionId: 'bao-cao-khoa-hoc',
     author: 'Phòng Quản lý Khoa học & CNTT',
@@ -156,7 +183,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-07',
-    code: 'HS-GT-2025-007',
+    code: 'PN-GT-2025-007',
     title: 'Giáo trình Quản trị Hệ thống Thông tin Doanh nghiệp & Lưu trữ Số',
     collectionId: 'sach-giao-trinh',
     author: 'PGS.TS. Nguyễn Văn Minh (Chủ biên)',
@@ -176,9 +203,9 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-08',
-    code: 'HS-HC-2026-008',
+    code: 'PN-HC-2026-008',
     title: 'Quy chế Quản lý, Lưu trữ và Khai thác Hồ sơ Tài liệu Số trên Google Drive',
-    collectionId: 'ho-so-hanh-chinh',
+    collectionId: 'ho-so-quyet-dinh',
     author: 'Ban Giám hiệu / Phòng Hành chính - Tổng hợp',
     year: 2026,
     pages: 24,
@@ -196,7 +223,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-09',
-    code: 'HS-NC-2025-009',
+    code: 'PN-NC-2025-009',
     title: 'Nghiên cứu ứng dụng Học máy trong phân loại tự động văn bản hành chính tiếng Việt',
     collectionId: 'cong-trinh-nghien-cuu',
     author: 'TS. Trần Hoàng Nam, ThS. Lê Thu Hà',
@@ -216,8 +243,8 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-10',
-    code: 'HS-LV-2025-010',
-    title: 'Hoàn thiện hệ thống kiểm soát nội bộ tại các đơn vị sự nghiệp công lập tại TP.HCM',
+    code: 'PN-LV-2025-010',
+    title: 'Hoàn thiện hệ thống kiểm soát nội bộ tại các đơn vị sự nghiệp công lập',
     collectionId: 'luan-van',
     author: 'HVCH. Phạm Thị Thanh Thảo',
     year: 2025,
@@ -230,13 +257,13 @@ const DEFAULT_DOCUMENTS = [
     driveUrl: '',
     accessLevel: 'public',
     tags: ['Luận văn Thạc sĩ', 'Kiểm soát nội bộ', 'Kế toán'],
-    description: 'Luận văn Thạc sĩ chuyên ngành Kế toán - Kiểm toán bảo vệ tại Trường Đại học Mở TP.HCM.',
+    description: 'Luận văn Thạc sĩ chuyên ngành Kế toán - Kiểm toán.',
     createdAt: '2025-10-18',
     uploadedBy: 'Thủ thư'
   },
   {
     id: 'doc-11',
-    code: 'HS-LA-2024-011',
+    code: 'PN-LA-2024-011',
     title: 'Tác động của quản trị tri thức đến năng lực đổi mới sáng tạo của các doanh nghiệp công nghệ',
     collectionId: 'luan-an',
     author: 'NCS. Đặng Quốc Huy',
@@ -250,13 +277,13 @@ const DEFAULT_DOCUMENTS = [
     driveUrl: '',
     accessLevel: 'public',
     tags: ['Luận án Tiến sĩ', 'Quản trị kinh doanh', 'Đổi mới sáng tạo'],
-    description: 'Luận án Tiến sĩ Quản trị kinh doanh khảo sát trên 350 doanh nghiệp công nghệ tại khu vực Đông Nam Bộ.',
+    description: 'Luận án Tiến sĩ Quản trị kinh doanh khảo sát trên 350 doanh nghiệp công nghệ.',
     createdAt: '2024-09-22',
     uploadedBy: 'Quản trị viên'
   },
   {
     id: 'doc-12',
-    code: 'HS-KL-2026-012',
+    code: 'PN-KL-2026-012',
     title: 'Xây dựng cổng thông tin thư viện số kết nối lưu trữ đám mây Google Drive API',
     collectionId: 'khoa-luan',
     author: 'SV. Nguyễn Minh Tuấn - Khoa CNTT',
@@ -276,7 +303,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-13',
-    code: 'HS-BT-2025-013',
+    code: 'PN-BT-2025-013',
     title: 'Bài trích: Xu hướng phát triển Thư viện Mở (Open Library) và Học liệu Mở (OER) tại Đông Nam Á',
     collectionId: 'bai-trich',
     author: 'Tạp chí Thông tin & Tư liệu',
@@ -296,10 +323,10 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-14',
-    code: 'HS-HN-2026-014',
+    code: 'PN-HN-2026-014',
     title: 'Kỷ yếu Hội thảo Quốc gia: Chuyển đổi số trong Quản lý Hồ sơ và Thư viện Đại học 2026',
     collectionId: 'tai-lieu-hoi-nghi',
-    author: 'Nhiều tác giả (ĐH Mở TP.HCM tổ chức)',
+    author: 'Nhiều tác giả',
     year: 2026,
     pages: 312,
     views: 156,
@@ -316,7 +343,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-15',
-    code: 'HS-LMS-2026-015',
+    code: 'PN-LMS-2026-015',
     title: 'Học liệu LMS: Hướng dẫn tra cứu, trích dẫn tài liệu học thuật theo chuẩn APA 7th',
     collectionId: 'tai-lieu-lms',
     author: 'Trung tâm Đào tạo Trực tuyến & Thư viện',
@@ -336,7 +363,7 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-16',
-    code: 'HS-TK-2024-016',
+    code: 'PN-TK-2024-016',
     title: 'Cẩm nang Phân loại Tài liệu Thư viện theo Khung phân loại Thập phân Dewey (DDC 23)',
     collectionId: 'sach-tham-khao',
     author: 'Thư viện Quốc gia Việt Nam (Biên dịch)',
@@ -356,8 +383,8 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-17',
-    code: 'HS-HA-2026-017',
-    title: 'Bộ ảnh tư liệu Lễ Kỷ niệm Ngày thành lập Trường và Khánh thành Không gian Thư viện Số',
+    code: 'PN-HA-2026-017',
+    title: 'Bộ ảnh tư liệu Lễ Kỷ niệm và Khánh thành Không gian Thư viện Số Phúc Nguyên',
     collectionId: 'hinh-anh-hoat-dong',
     author: 'Ban Truyền thông & Sự kiện',
     year: 2026,
@@ -370,13 +397,13 @@ const DEFAULT_DOCUMENTS = [
     driveUrl: '',
     accessLevel: 'public',
     tags: ['Hình ảnh', 'Sự kiện', 'Kỷ niệm'],
-    description: 'Album ảnh độ phân giải cao lưu trữ trên Google Drive ghi lại các khoảnh khắc tiêu biểu của nhà trường.',
+    description: 'Album ảnh độ phân giải cao lưu trữ trên Google Drive ghi lại các khoảnh khắc tiêu biểu.',
     createdAt: '2026-09-10',
     uploadedBy: 'Quản trị viên'
   },
   {
     id: 'doc-18',
-    code: 'HS-CD-2025-018',
+    code: 'PN-CD-2025-018',
     title: 'CD-ROM Số hóa: Bộ dữ liệu thống kê kinh tế - xã hội Việt Nam giai đoạn 2015 - 2025',
     collectionId: 'cd-multimedia',
     author: 'Tổng cục Thống kê',
@@ -396,9 +423,9 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 'doc-19',
-    code: 'HS-HC-2026-019',
+    code: 'PN-HC-2026-019',
     title: 'Danh mục Hồ sơ Lưu trữ Vĩnh viễn và Thời hạn bảo quản Hồ sơ Cơ quan năm 2026',
-    collectionId: 'ho-so-hanh-chinh',
+    collectionId: 'ho-so-hop-dong',
     author: 'Bộ phận Văn thư - Lưu trữ',
     year: 2026,
     pages: 38,
@@ -420,22 +447,31 @@ const DEFAULT_USERS = [
   {
     username: 'admin',
     password: '123',
-    fullName: 'Quản trị viên Hệ thống',
-    role: 'admin', // Toàn quyền: thêm/sửa/xóa hồ sơ, bộ sưu tập, cấu hình Drive, phân quyền
-    roleLabel: 'Quản trị viên (Admin)'
+    fullName: 'Quản trị viên Phúc Nguyên Library',
+    department: 'Ban Quản trị Thư viện',
+    role: 'admin',
+    roleLabel: 'Quản trị viên',
+    status: 'active',
+    createdAt: '2026-01-01'
   },
   {
     username: 'thuthu',
     password: '123',
-    fullName: 'Cán bộ Thư viện / Văn thư',
-    role: 'editor', // Quyền biên mục: thêm/sửa hồ sơ, quản lý bộ sưu tập
-    roleLabel: 'Thủ thư / Văn thư'
+    fullName: 'Cán bộ Thư viện - Văn thư',
+    department: 'Phòng Thông tin - Tư liệu',
+    role: 'editor',
+    roleLabel: 'Thủ thư / Biên mục',
+    status: 'active',
+    createdAt: '2026-01-10'
   },
   {
-    username: 'docgia',
+    username: 'docgia01',
     password: '123',
-    fullName: 'Độc giả / Nhân viên nội bộ',
-    role: 'viewer', // Quyền xem cả tài liệu công khai + tài liệu nội bộ
-    roleLabel: 'Độc giả nội bộ'
+    fullName: 'Nguyễn Văn An (Độc giả được cấp quyền)',
+    department: 'Khoa Quản lý Nhà nước',
+    role: 'viewer',
+    roleLabel: 'Độc giả Thư viện',
+    status: 'active',
+    createdAt: '2026-02-01'
   }
 ];
