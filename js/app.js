@@ -50,9 +50,12 @@ async function initApp() {
   renderCatalog();
   updateSidebarQuickStats();
 
-  // Tự động tải CSDL chung trên Cloud và tự động quét file mới trên Google Drive
+  // Tự động tải CSDL chung trên Cloud và tự động đồng bộ đa thiết bị mỗi 15 giây
   if (DriveService.hasCloudDatabase()) {
-    await syncFromCloudSilent();
+    await syncFromCloudSilent(true);
+    setInterval(() => {
+      syncFromCloudSilent(false);
+    }, 15000);
   }
   if (DriveService.hasDriveAutoScan()) {
     await autoMergeDriveFolderSilent();
@@ -122,10 +125,45 @@ function loadStateFromStorage() {
   }
 }
 
-async function syncFromCloudSilent() {
+async function syncFromCloudSilent(isInitialLoad = false) {
+  // Tránh ghi đè khi máy hiện tại đang trong quá trình lưu dữ liệu mới lên Cloud
+  if (DriveService._isPushingCloud || Date.now() - (DriveService._lastLocalSaveTime || 0) < 6000) {
+    return;
+  }
+
   try {
     const res = await DriveService.fetchCloudCatalog();
-    if (res && res.catalog) {
+    if (!res) return;
+
+    // Nếu trên Cloud chưa có file catalog-db.json (lần đầu tiên), nhưng trên trình duyệt của bạn đã thiết kế sẵn thư mục/tài liệu -> Đẩy ngay lên Cloud!
+    if (res.empty) {
+      if (AppState.collections.length > 1 || AppState.documents.length > 0) {
+        await pushStateToCloud();
+      }
+      return;
+    }
+
+    if (res.catalog) {
+      const cloudCols = Array.isArray(res.catalog.collections) ? res.catalog.collections : [];
+      const cloudDocs = Array.isArray(res.catalog.documents) ? res.catalog.documents : [];
+
+      // Nếu lần đầu mở sau khi bạn vừa tạo thư mục ở máy này mà chưa kịp đẩy lên Cloud, gộp chung và đẩy lên Cloud
+      if (
+        isInitialLoad &&
+        canManageDocs() &&
+        ((AppState.collections.length > 1 && cloudCols.length <= 1) ||
+          (AppState.documents.length > 0 && cloudDocs.length === 0))
+      ) {
+        await pushStateToCloud();
+        return;
+      }
+
+      // Chỉ cập nhật giao diện nếu bản trên Cloud có thay đổi mới
+      if (!isInitialLoad && res.catalog.updatedAt && AppState.lastCloudUpdatedAt === res.catalog.updatedAt) {
+        return;
+      }
+      AppState.lastCloudUpdatedAt = res.catalog.updatedAt || '';
+
       if (res.catalog.branding) {
         AppState.branding = { ...DEFAULT_BRANDING, ...res.catalog.branding };
         safeSetLocalStorage(STORAGE_KEYS.BRANDING, AppState.branding);
@@ -213,7 +251,10 @@ async function autoMergeDriveFolderSilent(showNotification = false) {
 async function pushStateToCloud() {
   if (!DriveService.hasCloudDatabase()) return;
   try {
+    const nowIso = new Date().toISOString();
+    AppState.lastCloudUpdatedAt = nowIso;
     await DriveService.pushCloudCatalog({
+      updatedAt: nowIso,
       branding: AppState.branding,
       collections: AppState.collections,
       documents: AppState.documents,
@@ -1204,6 +1245,7 @@ async function handleSaveDocumentForm(e) {
     let fileSize = document.getElementById('docFormSize').value.trim() || 'Google Drive';
     let localBlobId = '';
     let localFileUrl = '';
+    let cloudFileUrl = '';
 
     // Nếu người dùng có chọn file từ máy tính (dù đang ở tab nào cũng tự động xử lý)
     if (AppState.pendingUploadFile) {
@@ -1223,6 +1265,7 @@ async function handleSaveDocumentForm(e) {
 
       if (uploadRes.driveFileId) driveFileId = uploadRes.driveFileId;
       if (uploadRes.driveUrl) driveUrlInput = uploadRes.driveUrl;
+      if (uploadRes.cloudFileUrl) cloudFileUrl = uploadRes.cloudFileUrl;
       if (uploadRes.localBlobId) localBlobId = uploadRes.localBlobId;
       if (uploadRes.localFileUrl) localFileUrl = uploadRes.localFileUrl;
       if (uploadRes.fileType) fileType = uploadRes.fileType;
@@ -1251,6 +1294,7 @@ async function handleSaveDocumentForm(e) {
           fileSize,
           driveFileId: driveFileId || old.driveFileId,
           driveUrl: driveUrlInput || old.driveUrl,
+          cloudFileUrl: cloudFileUrl || old.cloudFileUrl || '',
           localBlobId: localBlobId || old.localBlobId,
           localFileUrl: localFileUrl || old.localFileUrl,
           coverUrl: AppState.pendingCoverDataUrl,
@@ -1258,7 +1302,7 @@ async function handleSaveDocumentForm(e) {
           tags,
           description: document.getElementById('docFormDesc').value.trim()
         };
-        showToast('Đã cập nhật hồ sơ thành công!');
+        showToast('Đã cập nhật hồ sơ và đồng bộ lên Cloud thành công!');
       }
     } else {
       const newDoc = {
@@ -1275,6 +1319,7 @@ async function handleSaveDocumentForm(e) {
         fileSize,
         driveFileId,
         driveUrl: driveUrlInput,
+        cloudFileUrl,
         localBlobId,
         localFileUrl,
         coverUrl: AppState.pendingCoverDataUrl || '',
@@ -1285,7 +1330,7 @@ async function handleSaveDocumentForm(e) {
         uploadedBy: AppState.currentUser ? AppState.currentUser.fullName : 'Admin'
       };
       AppState.documents.unshift(newDoc);
-      showToast('Đã đẩy hồ sơ lên thư viện thành công!');
+      showToast('Đã đẩy hồ sơ lên thư viện và đồng bộ cho mọi thiết bị!');
     }
 
     // Tự động chuyển sang đúng Bộ sưu tập vừa thêm và xóa bộ lọc để hiển thị ngay lập tức
@@ -1793,23 +1838,36 @@ async function handleSaveDriveConfig(e) {
 }
 
 async function handleScanDriveFolderNow() {
-  const cfg = DriveService.getConfig();
-  cfg.rootFolderId = document.getElementById('cfgRootFolderId').value.trim();
-  cfg.gasWebAppUrl = document.getElementById('cfgGasUrl').value.trim();
-  DriveService.saveConfig(cfg);
+  const modalEl = document.getElementById('driveConfigModal');
+  const isModalOpen = modalEl && modalEl.classList.contains('open');
+  if (isModalOpen) {
+    const cfg = DriveService.getConfig();
+    cfg.rootFolderId = document.getElementById('cfgRootFolderId').value.trim();
+    cfg.gasWebAppUrl = document.getElementById('cfgGasUrl').value.trim();
+    DriveService.saveConfig(cfg);
+  }
 
   const btn = document.getElementById('btnScanDriveFolder');
-  btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét thư mục Google Drive...`;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang đồng bộ dữ liệu...`;
+  }
 
   try {
-    await autoMergeDriveFolderSilent(true);
-    closeModal('driveConfigModal');
+    if (DriveService.hasDriveAutoScan()) {
+      await autoMergeDriveFolderSilent(true);
+      if (isModalOpen) closeModal('driveConfigModal');
+    } else if (DriveService.hasCloudDatabase()) {
+      await syncFromCloudSilent(false);
+      showToast('Đã đồng bộ danh mục Thư viện mới nhất từ Đám mây!');
+    }
   } catch (err) {
-    alert('Lỗi khi quét thư mục Google Drive: ' + err.message);
+    alert('Lỗi khi đồng bộ: ' + err.message);
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<i class="fa-solid fa-folder-tree"></i> Quét tự động các File có sẵn từ Drive`;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-folder-tree"></i> Quét tự động các File có sẵn từ Drive`;
+    }
   }
 }
 
