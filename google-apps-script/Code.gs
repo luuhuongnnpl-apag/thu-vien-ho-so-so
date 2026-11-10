@@ -1,26 +1,16 @@
 /**
  * ============================================================================
- * GOOGLE APPS SCRIPT BRIDGE & CLOUD DATABASE CHO WEB CÔNG KHAI
+ * GOOGLE APPS SCRIPT BRIDGE & CLOUD DATABASE (PHÚC NGUYÊN LIBRARY)
  * ============================================================================
- * File này giúp trang web (trên GitHub Pages / Firebase) thực hiện 3 việc:
- * 1. Lưu & tải danh mục hồ sơ chung (Cloud Database) cho mọi người truy cập.
- * 2. Tự động Upload file từ giao diện Web vào đúng thư mục Bộ sưu tập trên Google Drive.
- * 3. Quét (Scan) các thư mục & file có sẵn trên Google Drive để đưa lên thư viện web.
- *
- * HƯỚNG DẪN CÀI ĐẶT (CHỈ MẤT 1 PHÚT):
- * 1. Truy cập https://script.google.com -> Nhấn "Dự án mới" (New Project)
- * 2. Xóa mã mặc định và dán toàn bộ nội dung file Code.gs này vào.
- * 3. Nhấn "Triển khai" (Deploy) -> "Tùy chọn triển khai mới" (New deployment)
- * 4. Chọn loại: "Ứng dụng web" (Web app)
- *    - Thực thi dưới dạng (Execute as): "Tôi" (Me)
- *    - Ai có quyền truy cập (Who has access): "Bất kỳ ai" (Anyone)
- * 5. Nhấn Triển khai -> Copy URL Web App (https://script.google.com/macros/s/.../exec)
- * 6. Dán URL đó vào mục "Kết nối Google Drive / Cloud" trên Web (hoặc vào file js/cloud-config.js).
+ * Hỗ trợ:
+ * 1. Lưu & tải danh mục hồ sơ chung (Cloud Database) cho Web công khai.
+ * 2. Quét đệ quy cây thư mục đa cấp (Thư mục trong thư mục) và toàn bộ file có sẵn
+ *    trên Google Drive để gắn lên web mà không cần tải mới.
+ * 3. Tự động Upload file mới từ giao diện Web vào đúng thư mục trên Google Drive.
  */
 
 var DB_FILE_NAME = 'ou_library_catalog_db.json';
 
-// GET: Trả về dữ liệu danh mục hồ sơ chung cho mọi người truy cập web công khai
 function doGet(e) {
   try {
     var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'get_catalog';
@@ -28,7 +18,7 @@ function doGet(e) {
     var rootFolder = getRootFolderSafe(rootFolderId);
 
     if (action === 'scan_folder') {
-      var scanned = scanDriveFolderCatalog(rootFolder);
+      var scanned = scanDriveFolderCatalogRecursive(rootFolder);
       return jsonResponse({
         success: true,
         collections: scanned.collections,
@@ -60,14 +50,12 @@ function doGet(e) {
   }
 }
 
-// POST: Upload file mới lên Google Drive HOẶC Lưu cập nhật CSDL danh mục hồ sơ
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
     var action = data.action || 'upload';
     var rootFolder = getRootFolderSafe(data.rootFolderId);
 
-    // 1. Lưu toàn bộ danh mục (Bộ sưu tập + Hồ sơ + Lượt xem/tải) lên Google Drive
     if (action === 'save_catalog') {
       var jsonStr = JSON.stringify(data.catalog, null, 2);
       var existing = findFileInFolder(rootFolder, DB_FILE_NAME);
@@ -82,9 +70,8 @@ function doPost(e) {
       });
     }
 
-    // 2. Quét thư mục Google Drive để đồng bộ tự động các file có sẵn
     if (action === 'scan_folder') {
-      var scanned = scanDriveFolderCatalog(rootFolder);
+      var scanned = scanDriveFolderCatalogRecursive(rootFolder);
       return jsonResponse({
         success: true,
         collections: scanned.collections,
@@ -92,7 +79,6 @@ function doPost(e) {
       });
     }
 
-    // 3. Upload file hồ sơ lên thư mục Bộ sưu tập trên Google Drive
     if (action === 'upload') {
       var targetFolder = rootFolder;
       if (data.collectionFolderId) {
@@ -113,7 +99,6 @@ function doPost(e) {
         file.setDescription(data.title);
       }
 
-      // Cấp quyền xem qua link để nhúng Preview trực tiếp trên Web công khai
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
       return jsonResponse({
@@ -159,14 +144,13 @@ function getOrCreateSubFolder(parentFolder, folderName) {
   return parentFolder.createFolder(folderName);
 }
 
-// Quét các thư mục con (làm Bộ sưu tập) và các file bên trong (làm Hồ sơ tài liệu)
-function scanDriveFolderCatalog(rootFolder) {
+// Quét đệ quy các thư mục cha & thư mục con (làm Bộ sưu tập đa cấp) và gắn các file có sẵn
+function scanDriveFolderCatalogRecursive(rootFolder) {
   var collections = [
-    { id: 'all', name: 'Tất cả bộ sưu tập', description: 'Toàn bộ hồ sơ trong kho Google Drive', driveFolderId: rootFolder.getId() }
+    { id: 'all', name: 'Tất cả bộ sưu tập', parentId: null, description: 'Toàn bộ hồ sơ trong kho Google Drive', driveFolderId: rootFolder.getId() }
   ];
   var documents = [];
 
-  // Quét các file nằm trực tiếp ở thư mục gốc
   var rootFiles = rootFolder.getFiles();
   var rootColId = 'ho-so-chung';
   var hasRootFiles = false;
@@ -180,30 +164,38 @@ function scanDriveFolderCatalog(rootFolder) {
     collections.push({
       id: rootColId,
       name: 'Hồ sơ chung',
+      parentId: null,
       description: 'Tài liệu tại thư mục gốc Google Drive',
       driveFolderId: rootFolder.getId()
     });
   }
 
-  // Quét từng thư mục con -> mỗi thư mục con là 1 Bộ sưu tập
-  var subFolders = rootFolder.getFolders();
-  while (subFolders.hasNext()) {
-    var sf = subFolders.next();
-    var colId = 'col-' + sf.getId().slice(0, 8);
-    collections.push({
-      id: colId,
-      name: sf.getName(),
-      description: sf.getDescription() || ('Thư mục Google Drive: ' + sf.getName()),
-      driveFolderId: sf.getId()
-    });
+  function scanSubFolders(folder, parentCollectionId, depth) {
+    if (depth > 5) return; // Giới hạn độ sâu tránh timeout
+    var subFolders = folder.getFolders();
+    while (subFolders.hasNext()) {
+      var sf = subFolders.next();
+      var colId = 'col-' + sf.getId().slice(0, 8);
+      collections.push({
+        id: colId,
+        name: sf.getName(),
+        parentId: parentCollectionId,
+        description: sf.getDescription() || ('Thư mục Google Drive: ' + sf.getName()),
+        driveFolderId: sf.getId()
+      });
 
-    var files = sf.getFiles();
-    while (files.hasNext()) {
-      var f = files.next();
-      if (f.getName() === DB_FILE_NAME) continue;
-      documents.push(mapDriveFileToDoc(f, colId));
+      var files = sf.getFiles();
+      while (files.hasNext()) {
+        var f = files.next();
+        if (f.getName() === DB_FILE_NAME) continue;
+        documents.push(mapDriveFileToDoc(f, colId));
+      }
+
+      scanSubFolders(sf, colId, depth + 1);
     }
   }
+
+  scanSubFolders(rootFolder, null, 0);
 
   return { collections: collections, documents: documents };
 }
@@ -218,10 +210,10 @@ function mapDriveFileToDoc(file, collectionId) {
 
   return {
     id: 'drive-' + file.getId(),
-    code: 'GD-' + file.getId().slice(0, 6).toUpperCase(),
+    code: 'PN-' + file.getId().slice(0, 6).toUpperCase(),
     title: name.replace(/\.[^/.]+$/, ''),
     collectionId: collectionId,
-    author: (file.getOwner() && file.getOwner().getName()) ? file.getOwner().getName() : 'Google Drive',
+    author: (file.getOwner() && file.getOwner().getName()) ? file.getOwner().getName() : 'Phúc Nguyên Library',
     year: year,
     pages: 1,
     views: 1,
@@ -232,7 +224,7 @@ function mapDriveFileToDoc(file, collectionId) {
     driveUrl: file.getUrl(),
     accessLevel: 'public',
     tags: [ext, 'Google Drive'],
-    description: file.getDescription() || ('Tài liệu đồng bộ từ Google Drive: ' + name),
+    description: file.getDescription() || ('Tài liệu gắn trực tiếp từ Google Drive: ' + name),
     createdAt: createdDate,
     uploadedBy: 'Google Drive Sync'
   };
