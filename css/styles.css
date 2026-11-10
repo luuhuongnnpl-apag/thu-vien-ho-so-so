@@ -3,11 +3,11 @@
    ========================================================================== */
 
 :root {
-  --pn-primary: #1b365d;       /* Xanh Navy Học thuật Phúc Nguyên */
-  --pn-primary-dark: #102340;
-  --pn-primary-light: #2b548e;
-  --pn-gold: #c59b27;          /* Vàng Đồng Tri thức */
-  --pn-gold-light: #f4e8c1;
+  --pn-primary: #254b73;       /* Xanh Navy Phúc Nguyên Library */
+  --pn-primary-dark: #193553;
+  --pn-primary-light: #356596;
+  --pn-gold: #214b2f;          /* Xanh Rừng Cây Tri Thức Phúc Nguyên */
+  --pn-gold-light: #dcece2;
   --pn-accent: #1e62d0;
   --pn-red: #d93025;
   --bg-page: #f4f6f9;
@@ -71,13 +71,17 @@ body {
 }
 
 .brand-logo-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  object-fit: contain;
-  background: #fff;
-  padding: 2px;
-  border: 1px solid var(--pn-gold);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #254b73;
+  padding: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .drive-status-pill {
@@ -218,12 +222,12 @@ body {
 }
 
 .hero-logo-badge {
-  width: 54px;
-  height: 54px;
-  border-radius: 10px;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
   background: var(--pn-primary);
-  border: 2px solid var(--pn-gold);
-  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.22);
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(27, 54, 93, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
