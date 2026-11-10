@@ -1,0 +1,1160 @@
+/* ==========================================================================
+   THƯ VIỆN SỐ & LƯU TRỮ HỒ SƠ (PHONG CÁCH ĐH MỞ TP.HCM)
+   ========================================================================== */
+
+:root {
+  --ou-navy: #233876;
+  --ou-navy-dark: #192958;
+  --ou-navy-light: #2f4b9e;
+  --ou-blue: #1e62d0;
+  --ou-sky: #cbe7f9;
+  --ou-red: #d93025;
+  --bg-page: #f2f3f5;
+  --bg-card: #ffffff;
+  --text-main: #222831;
+  --text-muted: #5f6672;
+  --border-color: #dcdcdc;
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 6px 18px rgba(35, 56, 118, 0.16);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   TOP UTILITY BAR (ADMIN, AUTH, DRIVE STATUS)
+   ========================================================================== */
+.top-utility-bar {
+  background: var(--ou-navy-dark);
+  color: #e5e7eb;
+  font-size: 13px;
+  padding: 7px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.utility-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.drive-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #a7f3d0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.drive-status-pill:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.drive-status-pill.disconnected {
+  color: #fde68a;
+}
+
+.utility-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.util-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 4px 11px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.util-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.util-btn.primary-action {
+  background: #10b981;
+  border-color: #059669;
+  font-weight: 500;
+}
+
+.util-btn.primary-action:hover {
+  background: #059669;
+}
+
+.user-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(30, 98, 208, 0.45);
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   HERO BANNER ("TÀI LIỆU SỐ" - GIỐNG MẪU ĐH MỞ TP.HCM)
+   ========================================================================== */
+.hero-banner {
+  position: relative;
+  height: 125px;
+  background: linear-gradient(180deg, #b8e1fc 0%, #d8f0fe 55%, #eff8ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid #d5e6f5;
+}
+
+/* Họa tiết quả địa cầu mờ và đường cong bên phải giống ảnh mẫu */
+.hero-banner::before {
+  content: "";
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.45) 0%, rgba(162,212,247,0.28) 65%, transparent 70%);
+  top: -110px;
+  left: 50%;
+  transform: translateX(-55%);
+  pointer-events: none;
+}
+
+.hero-banner::after {
+  content: "";
+  position: absolute;
+  right: -40px;
+  bottom: -45px;
+  width: 360px;
+  height: 110px;
+  border-top: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(168, 216, 250, 0.45), rgba(142, 201, 245, 0.65));
+  pointer-events: none;
+}
+
+.hero-globe-svg {
+  position: absolute;
+  opacity: 0.22;
+  width: 280px;
+  height: 280px;
+  pointer-events: none;
+}
+
+.hero-title {
+  position: relative;
+  z-index: 2;
+  font-size: 32px;
+  font-weight: 500;
+  color: #3a66a3;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
+}
+
+/* ==========================================================================
+   MAIN CONTAINER (2 CỘT: BỘ SƯU TẬP & DANH MỤC TÀI LIỆU SỐ)
+   ========================================================================== */
+.library-container {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 26px 24px 50px;
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 32px;
+  flex: 1;
+}
+
+.section-heading {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ou-navy);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  position: relative;
+  padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 105px;
+  height: 3px;
+  background-color: var(--ou-navy);
+}
+
+/* ==========================================================================
+   LEFT SIDEBAR: BỘ SƯU TẬP
+   ========================================================================== */
+.collections-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-edit-btn {
+  background: transparent;
+  border: 1px solid var(--ou-navy);
+  color: var(--ou-navy);
+  font-size: 11.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sidebar-edit-btn:hover {
+  background: var(--ou-navy);
+  color: #fff;
+}
+
+.collections-list-wrapper {
+  max-height: 540px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Custom scrollbar giống thanh cuộn xám gọn trong ảnh mẫu */
+.collections-list-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.collections-list-wrapper::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+
+.collections-list-wrapper::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 4px;
+}
+
+.collections-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.collection-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--ou-navy);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.15s, color 0.15s;
+  user-select: none;
+}
+
+.collection-item:hover {
+  background-color: #e3e8f4;
+}
+
+.collection-item.active {
+  background-color: var(--ou-navy);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.collection-count {
+  font-size: 12px;
+  opacity: 0.75;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.collection-item.active .collection-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  opacity: 1;
+}
+
+/* Box thống kê nhanh bên dưới sidebar */
+.sidebar-quick-stats {
+  margin-top: 22px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.sidebar-quick-stats h4 {
+  font-size: 13px;
+  color: var(--ou-navy);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 6px;
+}
+
+.stat-mini-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  color: var(--text-muted);
+}
+
+.stat-mini-row strong {
+  color: var(--text-main);
+}
+
+/* ==========================================================================
+   RIGHT CONTENT AREA: DANH MỤC TÀI LIỆU SỐ
+   ========================================================================== */
+.catalog-main {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Thanh tìm kiếm chuẩn ĐH Mở TP.HCM */
+.search-bar-container {
+  display: flex;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.search-input {
+  flex: 1;
+  height: 44px;
+  padding: 0 16px;
+  font-size: 14.5px;
+  border: 1px solid #e0e0e0;
+  border-right: none;
+  background: #ffffff;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-input:focus {
+  border-color: var(--ou-navy);
+}
+
+.search-submit-btn {
+  width: 145px;
+  height: 44px;
+  background-color: var(--ou-navy);
+  color: #ffffff;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-submit-btn:hover {
+  background-color: var(--ou-navy-dark);
+}
+
+/* Bộ lọc tìm kiếm nâng cao */
+.advanced-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-sm);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.filter-select,
+.filter-input-sm {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text-main);
+  outline: none;
+}
+
+.filter-select:focus,
+.filter-input-sm:focus {
+  border-color: var(--ou-navy);
+}
+
+.filter-reset-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--ou-blue);
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-reset-btn:hover {
+  text-decoration: underline;
+}
+
+/* Dòng trạng thái "Tìm được 19 tài liệu" với 2 đường kẻ chấm tròn hai bên */
+.results-count-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 12px 0 14px;
+  color: #555;
+  font-size: 19px;
+}
+
+.results-count-banner .line-dot {
+  display: flex;
+  align-items: center;
+  width: 65px;
+}
+
+.results-count-banner .line-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ou-navy);
+  display: inline-block;
+}
+
+.results-count-banner .line-dot::after {
+  content: "";
+  flex: 1;
+  height: 1.5px;
+  background: var(--ou-navy);
+  display: inline-block;
+}
+
+.results-count-banner .line-dot.right::before {
+  display: none;
+}
+
+.results-count-banner .line-dot.right::after {
+  content: "";
+  flex: 1;
+  height: 1.5px;
+  background: var(--ou-navy);
+}
+
+.results-count-banner .dot-end {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ou-navy);
+}
+
+.results-number {
+  color: var(--ou-red);
+  font-weight: 700;
+  margin: 0 4px;
+}
+
+/* Thanh công cụ chuyển đổi chế độ xem (List / Grid) */
+.catalog-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.view-mode-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.view-btn:hover,
+.view-btn.active {
+  color: var(--ou-navy);
+}
+
+.toolbar-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-add-doc {
+  background: var(--ou-navy);
+  color: #ffffff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.btn-add-doc:hover {
+  background: var(--ou-navy-dark);
+}
+
+/* ==========================================================================
+   DOCUMENT GRID VIEW (5 CỘT CHUẨN ẢNH MẪU ĐH MỞ TP.HCM)
+   ========================================================================== */
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
+}
+
+.doc-card {
+  background: var(--bg-card);
+  border: 1px solid #e6e6e6;
+  border-radius: 3px;
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s;
+  position: relative;
+}
+
+.doc-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Khung bìa sách 3D giống hệt ảnh mẫu */
+.doc-cover-wrapper {
+  width: 100%;
+  aspect-ratio: 3 / 4.1;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 10px 14px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.book-3d-frame {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #d6d9de 0%, #f1f3f5 7%, #e9ecef 12%, #f8f9fa 92%, #dee2e6 100%);
+  border: 1px solid #ced4da;
+  border-radius: 2px 4px 4px 2px;
+  box-shadow:
+    -5px 6px 10px rgba(0, 0, 0, 0.22),
+    inset 4px 0 6px rgba(255, 255, 255, 0.6),
+    inset -2px -3px 0 #ffffff,
+    inset -3px -5px 0 #adb5bd;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.book-3d-frame img.custom-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ou-book-logo {
+  width: 68%;
+  height: auto;
+  max-height: 75%;
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.12));
+}
+
+.doc-filetype-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(35, 56, 118, 0.88);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.doc-filetype-badge.pdf { background: #dc2626; }
+.doc-filetype-badge.docx { background: #2563eb; }
+.doc-filetype-badge.xlsx { background: #16a34a; }
+.doc-filetype-badge.pptx { background: #ea580c; }
+.doc-filetype-badge.image { background: #7c3aed; }
+
+.doc-drive-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #1e62d0;
+  title: "Đã lưu trên Google Drive";
+}
+
+/* Tiêu đề tài liệu (2 dòng) */
+.doc-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #2b2b2b;
+  line-height: 1.42;
+  height: 38px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.doc-title:hover {
+  color: var(--ou-blue);
+}
+
+/* Hàng icon thống kê (Lượt xem / Số trang & Lượt tải / Đính kèm) */
+.doc-meta-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.doc-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doc-stat-item svg {
+  width: 14px;
+  height: 14px;
+  color: var(--ou-navy);
+}
+
+/* Nút "Chi tiết" màu xanh đậm bo góc chuẩn mẫu */
+.btn-detail {
+  width: 100%;
+  height: 36px;
+  background-color: var(--ou-navy);
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  margin-top: auto;
+}
+
+.btn-detail:hover {
+  background-color: var(--ou-navy-dark);
+}
+
+/* ==========================================================================
+   DOCUMENT LIST VIEW (CHẾ ĐỘ XEM DANH SÁCH)
+   ========================================================================== */
+.documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doc-list-item {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 18px;
+  align-items: center;
+  transition: box-shadow 0.15s;
+}
+
+.doc-list-item:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.doc-list-thumb {
+  width: 70px;
+  height: 92px;
+}
+
+.doc-list-info h3 {
+  font-size: 15.5px;
+  color: var(--ou-navy);
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.doc-list-info h3:hover {
+  text-decoration: underline;
+}
+
+.doc-list-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.doc-list-desc {
+  font-size: 13px;
+  color: #4b5563;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.doc-list-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 120px;
+}
+
+/* ==========================================================================
+   MODALS (CHI TIẾT & XEM TRƯỚC, UPLOAD HỒ SƠ, QUẢN TRỊ, THỐNG KÊ)
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-dialog {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 1080px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.modal-dialog.modal-md {
+  max-width: 680px;
+}
+
+.modal-dialog.modal-sm {
+  max-width: 460px;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  background: var(--ou-navy);
+  color: #ffffff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h3 {
+  font-size: 17px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Chi tiết tài liệu + Khung Xem Trước (Preview) */
+.detail-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 22px;
+}
+
+.detail-meta-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.detail-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin-top: 12px;
+}
+
+.detail-meta-table tr {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-meta-table th {
+  text-align: left;
+  padding: 8px 6px;
+  color: var(--text-muted);
+  font-weight: 500;
+  width: 38%;
+  vertical-align: top;
+}
+
+.detail-meta-table td {
+  padding: 8px 6px;
+  color: var(--text-main);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.detail-preview-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1e293b;
+  min-height: 520px;
+}
+
+.preview-toolbar {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.preview-frame-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #334155;
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  border: none;
+  background: #fff;
+}
+
+/* Form Thêm / Sửa Hồ Sơ */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-control {
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.form-control:focus {
+  border-color: var(--ou-navy);
+  box-shadow: 0 0 0 2px rgba(35, 56, 118, 0.12);
+}
+
+.upload-dropzone {
+  border: 2px dashed #93c5fd;
+  background: #eff6ff;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  background: #dbeafe;
+  border-color: var(--ou-blue);
+}
+
+/* Buttons chuẩn trong Modal */
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--ou-navy);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--ou-navy-dark);
+}
+
+.btn-success {
+  background: #10b981;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-outline {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.btn-outline:hover {
+  background: #f1f5f9;
+}
+
+/* Dashboard Thống Kê */
+.stats-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-card-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--ou-navy);
+  padding: 14px;
+  border-radius: 4px;
+}
+
+.stat-card-box .stat-label {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.stat-card-box .stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ou-navy);
+  margin-top: 4px;
+}
+
+/* Toast Notification */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast-msg {
+  background: #1e293b;
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  border-left: 4px solid #10b981;
+  animation: modalFadeIn 0.2s ease;
+}
+
+/* Footer */
+.library-footer {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 18px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .documents-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .library-container {
+    grid-template-columns: 1fr;
+  }
+  .documents-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .documents-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stats-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
