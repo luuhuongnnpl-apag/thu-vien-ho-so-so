@@ -29,6 +29,9 @@
     </div>
 
     <div class="utility-right">
+      <button id="btnOpenNoteTop" class="util-btn" style="background:#d97706;border-color:#b45309;color:#fff;font-weight:600;" onclick="handleQuickCreateNoteFile()">
+        <i class="fa-solid fa-file-pen"></i> + Tạo Văn bản Ghi chú
+      </button>
       <button id="btnOpenUploadTop" class="util-btn primary-action" onclick="openAddDocumentModal('drive_link')">
         <i class="fa-brands fa-google-drive"></i> + Gắn / Tải Tài liệu Drive
       </button>
@@ -95,11 +98,11 @@
         <h4><i class="fa-solid fa-chart-simple"></i> Tổng quan Kho Hồ Sơ</h4>
         <div class="stat-mini-row">
           <span>Tổng số hồ sơ:</span>
-          <strong id="quickStatTotal">19</strong>
+          <strong id="quickStatTotal">1</strong>
         </div>
         <div class="stat-mini-row">
           <span>Tổng lượt xem:</span>
-          <strong id="quickStatViews">0</strong>
+          <strong id="quickStatViews">3</strong>
         </div>
         <div class="stat-mini-row">
           <span>Tổng lượt tải:</span>
@@ -107,7 +110,7 @@
         </div>
         <div class="stat-mini-row">
           <span>Đã gắn link Drive:</span>
-          <strong id="quickStatDrive">0/19</strong>
+          <strong id="quickStatDrive">1/1</strong>
         </div>
       </div>
     </aside>
@@ -145,6 +148,7 @@
           <label for="filterTypeSelect"><i class="fa-regular fa-file-lines"></i> Định dạng:</label>
           <select id="filterTypeSelect" class="filter-select">
             <option value="all">Tất cả file</option>
+            <option value="NOTE">Văn bản Ghi chú (NOTE)</option>
             <option value="PDF">PDF</option>
             <option value="DOCX">Word (DOCX)</option>
             <option value="XLSX">Excel (XLSX)</option>
@@ -198,6 +202,9 @@
         </div>
 
         <div class="toolbar-right-actions">
+          <button id="btnToolbarCreateNote" class="btn-add-doc" style="background:#d97706;" onclick="handleQuickCreateNoteFile()" title="Tạo file văn bản bằng ghi chú và soạn thảo trực tiếp ngay trong file">
+            <i class="fa-solid fa-file-pen"></i> + Tạo Văn bản Ghi chú
+          </button>
           <button id="btnToolbarSyncDrive" class="btn-add-doc" style="background:#0f766e;" onclick="handleScanDriveFolderNow()" title="Quét và cập nhật tự động các file/thư mục mới từ Google Drive">
             <i class="fa-solid fa-arrows-rotate"></i> Đồng bộ Drive
           </button>
@@ -209,6 +216,9 @@
           </button>
         </div>
       </div>
+
+      <!-- Khung tạo nhanh văn bản khi đang ở mục GHI CHÚ -->
+      <div id="notesSectionBanner" style="display:none;"></div>
 
       <!-- Khu vực hiển thị thẻ tài liệu -->
       <div id="documentsContainer" class="documents-grid"></div>
@@ -230,9 +240,9 @@
           <div id="detailMetaContainer" class="detail-meta-panel"></div>
 
           <div class="detail-preview-panel">
-            <div class="preview-toolbar">
-              <span><i class="fa-solid fa-eye"></i> Trình xem trước trực tiếp (Google Drive / PDF Viewer)</span>
-              <span style="font-size:12px;color:#94a3b8;">Hỗ trợ phóng to, in ấn và tải về</span>
+            <div id="detailPreviewToolbar" class="preview-toolbar">
+              <span><i class="fa-solid fa-eye"></i> Trình xem trước &amp; Soạn thảo trực tiếp</span>
+              <span style="font-size:12px;color:#94a3b8;">Hỗ trợ soạn thảo, phóng to, in ấn và chuyển vào file cụ thể</span>
             </div>
             <div id="detailPreviewContainer" class="preview-frame-container"></div>
           </div>
@@ -257,16 +267,19 @@
         <div class="modal-body">
           <input type="hidden" id="docFormId" />
 
-          <!-- 3 Tab chọn phương thức: Gắn file có sẵn trên Drive (Không cần tải mới) / Gắn hàng loạt / Upload mới -->
-          <div class="source-mode-tabs" style="grid-template-columns:1fr 1fr 1fr;">
+          <!-- 4 Tab chọn phương thức: Gắn file có sẵn trên Drive / Gắn hàng loạt / Upload mới / Tạo văn bản bằng Ghi chú -->
+          <div class="source-mode-tabs" style="grid-template-columns:repeat(4, 1fr);">
             <button type="button" class="source-tab-btn active" data-source-mode="drive_link" onclick="setDocSourceMode('drive_link')">
-              <i class="fa-solid fa-link"></i> Gắn từ Google Drive (Không cần tải mới)
+              <i class="fa-solid fa-link"></i> Gắn từ Google Drive
             </button>
             <button type="button" class="source-tab-btn" data-source-mode="bulk_drive" onclick="setDocSourceMode('bulk_drive')">
-              <i class="fa-solid fa-list-check"></i> Gắn nhiều link Drive cùng lúc
+              <i class="fa-solid fa-list-check"></i> Gắn nhiều link Drive
             </button>
             <button type="button" class="source-tab-btn" data-source-mode="upload_file" onclick="setDocSourceMode('upload_file')">
-              <i class="fa-solid fa-cloud-arrow-up"></i> Tải file mới từ máy tính
+              <i class="fa-solid fa-cloud-arrow-up"></i> Tải file từ máy tính
+            </button>
+            <button type="button" class="source-tab-btn" data-source-mode="note_editor" onclick="setDocSourceMode('note_editor')">
+              <i class="fa-solid fa-file-pen"></i> Tạo văn bản Ghi chú
             </button>
           </div>
 
@@ -312,6 +325,36 @@
               <div id="uploadDropzoneText"></div>
             </div>
             <div id="uploadStatusText" style="font-size:12.5px;color:var(--pn-accent);margin-top:6px;font-weight:500;"></div>
+          </div>
+
+          <!-- PANE 4: TẠO VĂN BẢN BẰNG GHI CHÚ TRỰC TIẾP TRÊN WEB -->
+          <div id="paneSourceNoteEditor" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:14px;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+              <label for="docFormNoteContent" style="font-size:13px;font-weight:700;color:#92400e;">
+                <i class="fa-solid fa-file-pen"></i> Nội dung soạn thảo văn bản Ghi chú (Sau khi tạo có thể mở file để soạn thảo đầy đủ &amp; chuyển vào file cụ thể):
+              </label>
+              <button type="button" class="btn btn-primary" style="background:#d97706;padding:5px 10px;font-size:12px;" onclick="closeModal('docFormModal'); handleQuickCreateNoteFile()">
+                <i class="fa-solid fa-maximize"></i> Mở Trình Soạn Thảo Trực Tiếp Trong File
+              </button>
+            </div>
+            <div class="in-file-formatting-bar" style="border:1px solid #fcd34d;border-bottom:none;border-radius:4px 4px 0 0;background:#fef3c7;">
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('bold')" title="In đậm"><b>B</b></button>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('italic')" title="In nghiêng"><i>I</i></button>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('underline')" title="Gạch chân"><u>U</u></button>
+              <span class="fmt-divider"></span>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('insertUnorderedList')" title="Danh sách chấm"><i class="fa-solid fa-list-ul"></i></button>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('insertOrderedList')" title="Danh sách số"><i class="fa-solid fa-list-ol"></i></button>
+              <span class="fmt-divider"></span>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('justifyLeft')" title="Căn trái"><i class="fa-solid fa-align-left"></i></button>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('justifyCenter')" title="Căn giữa"><i class="fa-solid fa-align-center"></i></button>
+              <button type="button" class="fmt-btn" onclick="execModalNoteCmd('justifyFull')" title="Căn đều"><i class="fa-solid fa-align-justify"></i></button>
+            </div>
+            <div
+              id="docFormNoteEditor"
+              contenteditable="true"
+              style="min-height:180px;max-height:280px;overflow-y:auto;background:#ffffff;border:1px solid #f59e0b;border-radius:0 0 4px 4px;padding:14px;font-size:14px;line-height:1.6;outline:none;"
+              data-placeholder="Nhập hoặc dán nội dung văn bản ghi chú tại đây..."
+            ></div>
           </div>
 
           <!-- THÔNG TIN CHI TIẾT TÀI LIỆU & KÉO THẢ ẢNH BÌA -->
@@ -369,6 +412,7 @@
             <div class="form-group">
               <label for="docFormType">Định dạng hồ sơ</label>
               <select id="docFormType" class="form-control">
+                <option value="NOTE">Văn bản Ghi chú (NOTE)</option>
                 <option value="PDF">PDF</option>
                 <option value="DOCX">Word (DOCX)</option>
                 <option value="XLSX">Excel (XLSX)</option>
@@ -795,6 +839,92 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('statsModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 9: LƯU & CHUYỂN VĂN BẢN GHI CHÚ VÀO CÁC FILE / THƯ MỤC CỤ THỂ
+       ======================================================================== -->
+  <div id="transferNoteModal" class="modal-backdrop">
+    <div class="modal-dialog modal-md">
+      <div class="modal-header" style="background:#b45309;border-bottom-color:#fde68a;">
+        <h3><i class="fa-solid fa-share-from-square"></i> Chuyển Văn bản Ghi chú vào File / Thư mục cụ thể</h3>
+        <button class="modal-close" onclick="closeModal('transferNoteModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="transferSourceNoteId" />
+        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:12px 14px;margin-bottom:16px;">
+          <div style="font-size:12px;color:#92400e;">Văn bản ghi chú đang chọn:</div>
+          <div id="transferSourceNoteTitle" style="font-size:15px;font-weight:700;color:#78350f;margin-top:2px;"></div>
+        </div>
+
+        <!-- CÁCH 1: CHUYỂN / ĐÍNH KÈM VÀO MỘT FILE (HỒ SƠ) CỤ THỂ TRONG THƯ VIỆN -->
+        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:14px;margin-bottom:14px;">
+          <h4 style="font-size:14px;color:var(--pn-primary);margin-bottom:8px;">
+            <i class="fa-solid fa-file-import" style="color:#d97706;"></i> 1. Chuyển vào một File (Hồ sơ) cụ thể trong Thư viện
+          </h4>
+          <p style="font-size:12.5px;color:#475569;margin-bottom:10px;">
+            Chọn hồ sơ / file cụ thể để đính kèm văn bản ghi chú này vào hoặc gộp nội dung soạn thảo vào thẳng trong file đó:
+          </p>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label for="transferTargetDocSelect">Chọn Hồ sơ / File đích cụ thể:</label>
+            <select id="transferTargetDocSelect" class="form-control"></select>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="transferTargetDocAction">Phương thức chuyển vào File đích:</label>
+            <select id="transferTargetDocAction" class="form-control">
+              <option value="attach_and_move">Đính kèm văn bản này vào Hồ sơ đích &amp; chuyển về cùng thư mục Hồ sơ đích</option>
+              <option value="merge_content">Gộp (Nối thêm) toàn bộ nội dung văn bản này vào thẳng trong Hồ sơ đích</option>
+              <option value="replace_content">Cập nhật (Ghi đè) nội dung văn bản của Hồ sơ đích bằng văn bản này</option>
+            </select>
+          </div>
+          <div style="text-align:right;">
+            <button type="button" class="btn btn-primary" style="background:#d97706;" onclick="handleConfirmTransferToSpecificFile()">
+              <i class="fa-solid fa-file-arrow-down"></i> Thực hiện Chuyển vào File cụ thể này
+            </button>
+          </div>
+        </div>
+
+        <!-- CÁCH 2: DI CHUYỂN / SAO CHÉP FILE VĂN BẢN SANG THƯ MỤC (BỘ SƯU TẬP) CỤ THỂ -->
+        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:14px;margin-bottom:14px;">
+          <h4 style="font-size:14px;color:var(--pn-primary);margin-bottom:8px;">
+            <i class="fa-solid fa-folder-tree" style="color:var(--pn-primary);"></i> 2. Chuyển File văn bản này vào Thư mục / Bộ sưu tập cụ thể
+          </h4>
+          <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end;">
+            <div class="form-group">
+              <label for="transferTargetColSelect">Chọn Thư mục / Bộ sưu tập đích:</label>
+              <select id="transferTargetColSelect" class="form-control"></select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="handleMoveNoteToCollection(false)">
+              <i class="fa-solid fa-right-long"></i> Di chuyển tới đây
+            </button>
+            <button type="button" class="btn btn-outline" onclick="handleMoveNoteToCollection(true)">
+              <i class="fa-regular fa-copy"></i> Sao chép tới đây
+            </button>
+          </div>
+        </div>
+
+        <!-- CÁCH 3: XUẤT THÀNH FILE CỤ THỂ TRÊN MÁY TÍNH (.DOC WORD, .TXT, IN PDF) -->
+        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:14px;">
+          <h4 style="font-size:14px;color:var(--pn-primary);margin-bottom:8px;">
+            <i class="fa-solid fa-file-export" style="color:#16a34a;"></i> 3. Xuất văn bản đã soạn thành File cụ thể về máy (.DOC Word / .TXT / PDF)
+          </h4>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button type="button" class="btn btn-primary" style="background:#2563eb;" onclick="exportNoteDocumentAsFile(document.getElementById('transferSourceNoteId').value, 'doc')">
+              <i class="fa-solid fa-file-word"></i> Xuất ra File Word (.doc)
+            </button>
+            <button type="button" class="btn btn-outline" onclick="exportNoteDocumentAsFile(document.getElementById('transferSourceNoteId').value, 'txt')">
+              <i class="fa-regular fa-file-lines"></i> Xuất File Văn bản (.txt)
+            </button>
+            <button type="button" class="btn btn-outline" onclick="printNoteDocument(document.getElementById('transferSourceNoteId').value)">
+              <i class="fa-solid fa-print"></i> In / Lưu thành PDF (.pdf)
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('transferNoteModal')">Đóng</button>
       </div>
     </div>
   </div>
