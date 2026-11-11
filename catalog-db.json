@@ -1,0 +1,93 @@
+{
+  "updatedAt": "2026-11-11T01:43:23.803Z",
+  "branding": {
+    "libraryName": "PHÚC NGUYÊN LIBRARY",
+    "bannerTitle": "PHÚC NGUYÊN LIBRARY",
+    "bannerSubtitle": "RESEARCH LAW FOR BETTER LIFE • TÀI LIỆU SỐ",
+    "primaryColor": "#254b73",
+    "goldColor": "#214b2f",
+    "fontFamily": "'Be Vietnam Pro', 'Roboto', sans-serif",
+    "logoDataUrl": "logo.png"
+  },
+  "collections": [
+    {
+      "id": "all",
+      "name": "Tất cả bộ sưu tập",
+      "parentId": null,
+      "description": "Toàn bộ hồ sơ và tài liệu số trong kho lưu trữ",
+      "driveFolderId": ""
+    },
+    {
+      "id": "chuong-trinh-ao-tao",
+      "name": "CHƯƠNG TRÌNH ĐÀO TẠO",
+      "parentId": null,
+      "description": "",
+      "driveFolderId": ""
+    },
+    {
+      "id": "ct-t-ban-hanh",
+      "name": "CTĐT BAN HÀNH",
+      "parentId": "chuong-trinh-ao-tao",
+      "description": "",
+      "driveFolderId": ""
+    },
+    {
+      "id": "ho-so-phat-trien-ct-t",
+      "name": "HỒ SƠ PHÁT TRIỂN CTĐT",
+      "parentId": "chuong-trinh-ao-tao",
+      "description": "",
+      "driveFolderId": ""
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-1794302598094",
+      "code": "PN-2026-001",
+      "title": "Chương trình đào tạo ngành Luật 2025",
+      "collectionId": "ct-t-ban-hanh",
+      "author": "Phúc Nguyên Library",
+      "year": 2026,
+      "pages": 15,
+      "views": 3,
+      "downloads": 0,
+      "fileType": "PDF",
+      "fileSize": "Google Drive",
+      "driveFileId": "14rvU23Ofo1jvsIkKAKtCFC1q7kacu3Uk",
+      "driveUrl": "https://drive.google.com/file/d/14rvU23Ofo1jvsIkKAKtCFC1q7kacu3Uk/view?usp=drive_link",
+      "localBlobId": "",
+      "localFileUrl": "",
+      "coverUrl": "",
+      "accessLevel": "public",
+      "tags": [],
+      "description": "",
+      "createdAt": "2026-11-10",
+      "uploadedBy": "Quản trị viên Phúc Nguyên Library"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "password": "123",
+      "fullName": "Quản trị viên Phúc Nguyên Library",
+      "department": "Ban Quản trị Thư viện",
+      "role": "admin",
+      "roleLabel": "Quản trị viên",
+      "status": "active",
+      "createdAt": "2026-01-01"
+    },
+    {
+      "username": "thuthu",
+      "password": "123",
+      "fullName": "Cán bộ Thư viện - Văn thư",
+      "department": "Phòng Thông tin - Tư liệu",
+      "role": "editor",
+      "roleLabel": "Thủ thư / Biên mục",
+      "status": "active",
+      "createdAt": "2026-01-10"
+    }
+  ],
+  "security": {
+    "requireLoginToView": false,
+    "requireLoginToDownload": false
+  }
+}
