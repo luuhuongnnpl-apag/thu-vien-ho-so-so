@@ -88,6 +88,7 @@ function loadStateFromStorage() {
 
     const savedCols = localStorage.getItem(STORAGE_KEYS.COLLECTIONS);
     AppState.collections = savedCols ? JSON.parse(savedCols) : [...DEFAULT_COLLECTIONS];
+    ensureNotesCollectionExists();
 
     const savedDocs = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
     AppState.documents = savedDocs ? JSON.parse(savedDocs) : [...DEFAULT_DOCUMENTS];
@@ -171,6 +172,7 @@ async function syncFromCloudSilent(isInitialLoad = false) {
       }
       if (Array.isArray(res.catalog.collections) && res.catalog.collections.length > 0) {
         AppState.collections = res.catalog.collections;
+        ensureNotesCollectionExists();
         safeSetLocalStorage(STORAGE_KEYS.COLLECTIONS, AppState.collections);
       }
       if (Array.isArray(res.catalog.documents)) {
@@ -305,6 +307,69 @@ function canManageDocs() {
   return AppState.currentUser && ['admin', 'editor'].includes(AppState.currentUser.role);
 }
 
+function ensureNotesCollectionExists() {
+  if (!Array.isArray(AppState.collections)) {
+    AppState.collections = [...DEFAULT_COLLECTIONS];
+  }
+  const hasNoteCol = AppState.collections.some(
+    (c) =>
+      c.id === 'ghi-chu' ||
+      (c.name && c.name.trim().toLowerCase() === 'ghi chú') ||
+      (c.name && c.name.trim().toLowerCase() === 'ghi chu')
+  );
+  if (!hasNoteCol) {
+    const noteCol = {
+      id: 'ghi-chu',
+      name: 'GHI CHÚ',
+      parentId: null,
+      description: 'Tạo và soạn thảo văn bản bằng ghi chú trực tiếp trên web, sau đó lưu lại và chuyển vào các thư mục hoặc hồ sơ cụ thể',
+      driveFolderId: ''
+    };
+    const allIdx = AppState.collections.findIndex((c) => c.id === 'all');
+    if (allIdx !== -1) {
+      AppState.collections.splice(allIdx + 1, 0, noteCol);
+    } else {
+      AppState.collections.unshift(noteCol);
+    }
+  }
+}
+
+function getNotesCollectionId() {
+  ensureNotesCollectionExists();
+  const found = AppState.collections.find(
+    (c) =>
+      c.id === 'ghi-chu' ||
+      (c.name && c.name.trim().toLowerCase() === 'ghi chú') ||
+      (c.name && c.name.trim().toLowerCase() === 'ghi chu')
+  );
+  return found ? found.id : 'ghi-chu';
+}
+
+function isNoteCollection(colId) {
+  if (!colId || colId === 'all') return false;
+  const noteRootId = getNotesCollectionId();
+  if (colId === noteRootId) return true;
+  const descIds = getDescendantCollectionIds(noteRootId);
+  if (descIds.includes(colId)) return true;
+  const col = AppState.collections.find((c) => c.id === colId);
+  return Boolean(col && col.name && col.name.toLowerCase().includes('ghi chú'));
+}
+
+function isNoteDocument(doc) {
+  if (!doc) return false;
+  return Boolean(
+    doc.isNote ||
+    (doc.fileType || '').toUpperCase() === 'NOTE' ||
+    (typeof doc.noteContent === 'string' && doc.noteContent.trim().length > 0 && !doc.driveFileId)
+  );
+}
+
+function stripHtmlToText(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
 function isAdmin() {
   return AppState.currentUser && AppState.currentUser.role === 'admin';
 }
@@ -414,6 +479,8 @@ function renderTopBar() {
     if (el) el.style.display = visible ? 'inline-flex' : 'none';
   };
 
+  showEl('btnOpenNoteTop', true);
+  showEl('btnToolbarCreateNote', true);
   showEl('btnOpenUploadTop', hasEditPerm);
   showEl('btnToolbarAddDoc', hasEditPerm);
   showEl('btnToolbarLinkDrive', hasEditPerm);
@@ -549,22 +616,34 @@ function renderCollectionsSidebar() {
     const isCollapsed = Boolean(AppState.collapsedCollectionIds[col.id]);
     const indentPx = col.level * 16;
 
+    const isNoteCol = isNoteCollection(col.id);
+    const folderIconHtml = isNoteCol
+      ? `<i class="fa-solid fa-file-pen" style="color:${isActive ? '#fde68a' : '#d97706'};"></i>`
+      : '<i class="fa-regular fa-folder"></i>';
+
     const caretHtml = col.hasChildren
       ? `<span class="tree-caret" data-toggle-id="${escapeHtml(col.id)}" title="Đóng/Mở thư mục con">
            <i class="fa-solid ${isCollapsed ? 'fa-caret-right' : 'fa-caret-down'}"></i>
          </span>`
-      : `<span style="width:18px;display:inline-block;text-align:center;opacity:0.55;font-size:11px;">
-           ${col.level > 0 ? '└' : '<i class="fa-regular fa-folder"></i>'}
+      : `<span style="width:18px;display:inline-block;text-align:center;opacity:${isNoteCol ? '1' : '0.55'};font-size:11.5px;">
+           ${col.level > 0 ? '└' : folderIconHtml}
          </span>`;
 
+    const quickNoteBtn = isNoteCol
+      ? `<button class="btn-quick-subfolder" style="opacity:0.95;" data-quick-note="${escapeHtml(col.id)}" title="Tạo file văn bản bằng ghi chú mới trong '${escapeHtml(col.name)}'">
+           <i class="fa-solid fa-file-circle-plus" style="color:${isActive ? '#fde68a' : '#d97706'};"></i>
+         </button>`
+      : '';
+
     const quickAdminBtns = hasEdit
-      ? `<button class="btn-quick-subfolder" data-add-sub="${escapeHtml(col.id)}" title="Thêm thư mục con vào trong '${escapeHtml(col.name)}'">
+      ? `${quickNoteBtn}
+         <button class="btn-quick-subfolder" data-add-sub="${escapeHtml(col.id)}" title="Thêm thư mục con vào trong '${escapeHtml(col.name)}'">
            <i class="fa-solid fa-folder-plus"></i>
          </button>
          <button class="btn-quick-subfolder" data-edit-col="${escapeHtml(col.id)}" title="Sửa tên bộ sưu tập '${escapeHtml(col.name)}'">
            <i class="fa-solid fa-pen"></i>
          </button>`
-      : '';
+      : quickNoteBtn;
 
     html += `
       <li class="collection-item ${isActive ? 'active' : ''}" data-collection-id="${escapeHtml(col.id)}" style="padding-left:${10 + indentPx}px;" title="${escapeHtml(col.description || col.name)}">
@@ -607,6 +686,14 @@ function renderCollectionsSidebar() {
       e.stopPropagation();
       const parentId = btn.getAttribute('data-add-sub');
       openCollectionsManagerModal(null, parentId);
+    });
+  });
+
+  listEl.querySelectorAll('[data-quick-note]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const colId = btn.getAttribute('data-quick-note');
+      handleQuickCreateNoteFile('', colId);
     });
   });
 
@@ -992,7 +1079,25 @@ function setDocSourceMode(mode) {
   document.getElementById('paneSourceDriveLink').style.display = mode === 'drive_link' ? 'block' : 'none';
   document.getElementById('paneSourceUploadFile').style.display = mode === 'upload_file' ? 'block' : 'none';
   document.getElementById('paneSourceBulkDrive').style.display = mode === 'bulk_drive' ? 'block' : 'none';
+  const notePane = document.getElementById('paneSourceNoteEditor');
+  if (notePane) notePane.style.display = mode === 'note_editor' ? 'block' : 'none';
   document.getElementById('singleDocMetadataFields').style.display = mode === 'bulk_drive' ? 'none' : 'grid';
+
+  if (mode === 'note_editor') {
+    const typeSelect = document.getElementById('docFormType');
+    if (typeSelect) typeSelect.value = 'NOTE';
+    const colSelect = document.getElementById('docFormCollection');
+    if (colSelect && (!colSelect.value || colSelect.value === 'all')) {
+      colSelect.value = getNotesCollectionId();
+    }
+  }
+}
+
+function execModalNoteCmd(cmd, value = null) {
+  const editor = document.getElementById('docFormNoteEditor');
+  if (!editor) return;
+  editor.focus();
+  document.execCommand(cmd, false, value);
 }
 
 function updateCoverPreviewInForm() {
@@ -1067,6 +1172,16 @@ function openAddDocumentModal(defaultMode = 'drive_link') {
   document.getElementById('docFormAccess').value = 'public';
   document.getElementById('docFormTags').value = '';
   document.getElementById('docFormDesc').value = '';
+  const modalNoteEditor = document.getElementById('docFormNoteEditor');
+  if (modalNoteEditor) modalNoteEditor.innerHTML = '';
+  if (defaultMode === 'note_editor') {
+    document.getElementById('docFormType').value = 'NOTE';
+    populateDocFormCollections(
+      AppState.selectedCollectionId && AppState.selectedCollectionId !== 'all'
+        ? AppState.selectedCollectionId
+        : getNotesCollectionId()
+    );
+  }
   document.getElementById('uploadDropzoneText').innerHTML = `
     <i class="fa-solid fa-cloud-arrow-up" style="font-size:26px;color:var(--pn-accent);margin-bottom:4px;"></i>
     <div><strong>Kéo thả file hồ sơ (PDF, Word, Excel, Ảnh...) vào đây</strong> hoặc nhấn để chọn file từ máy tính</div>
@@ -1084,7 +1199,7 @@ function openEditDocumentModal(docId) {
 
   AppState.pendingUploadFile = null;
   AppState.pendingCoverDataUrl = doc.coverUrl || '';
-  setDocSourceMode('drive_link');
+  setDocSourceMode(isNoteDocument(doc) ? 'note_editor' : 'drive_link');
 
   document.getElementById('docFormModalTitle').innerHTML = `<i class="fa-regular fa-pen-to-square"></i> Cập nhật Hồ sơ: ${escapeHtml(doc.code || doc.id)}`;
   document.getElementById('docFormId').value = doc.id;
@@ -1101,6 +1216,8 @@ function openEditDocumentModal(docId) {
   document.getElementById('docFormAccess').value = doc.accessLevel || 'public';
   document.getElementById('docFormTags').value = (doc.tags || []).join(', ');
   document.getElementById('docFormDesc').value = doc.description || '';
+  const modalNoteEditor = document.getElementById('docFormNoteEditor');
+  if (modalNoteEditor) modalNoteEditor.innerHTML = doc.noteContent || '';
   document.getElementById('uploadStatusText').textContent = '';
 
   updateCoverPreviewInForm();
@@ -1215,10 +1332,15 @@ async function handleSaveDocumentForm(e) {
     return;
   }
 
-  // Chế độ Gắn 1 tài liệu Drive có sẵn hoặc Tải file mới
+  // Chế độ Gắn 1 tài liệu Drive có sẵn, Tải file mới, hoặc Tạo văn bản Ghi chú
   let driveUrlInput = document.getElementById('docFormDriveUrl').value.trim();
   let driveFileId = DriveService.extractFileId(driveUrlInput);
   let titleVal = document.getElementById('docFormTitle').value.trim();
+  const modalNoteEl = document.getElementById('docFormNoteEditor');
+  const noteHtmlInput = modalNoteEl ? modalNoteEl.innerHTML.trim() : '';
+  const isCreatingNote =
+    AppState.docSourceMode === 'note_editor' ||
+    document.getElementById('docFormType').value === 'NOTE';
 
   // Tự động tạo tiêu đề nếu người dùng chỉ dán link Drive hoặc chọn file mà quên gõ tiêu đề
   if (!titleVal) {
@@ -1226,6 +1348,9 @@ async function handleSaveDocumentForm(e) {
       titleVal = AppState.pendingUploadFile.name.replace(/\.[^/.]+$/, '');
     } else if (driveFileId) {
       titleVal = `Tài liệu Google Drive (#${driveFileId.slice(0, 6)})`;
+    } else if (isCreatingNote) {
+      const plainExcerpt = stripHtmlToText(noteHtmlInput).slice(0, 48);
+      titleVal = plainExcerpt || `Văn bản ghi chú ngày ${new Date().toLocaleDateString('vi-VN')}`;
     } else {
       alert('Vui lòng nhập Tên hồ sơ / Tiêu đề tài liệu (hoặc dán Link Google Drive / chọn File tải lên)!');
       return;
@@ -1282,6 +1407,7 @@ async function handleSaveDocumentForm(e) {
       const idx = AppState.documents.findIndex((d) => d.id === existingId);
       if (idx !== -1) {
         const old = AppState.documents[idx];
+        const updatedNoteContent = isCreatingNote ? (noteHtmlInput || old.noteContent || '') : (old.noteContent || '');
         AppState.documents[idx] = {
           ...old,
           code: document.getElementById('docFormCode').value.trim(),
@@ -1290,8 +1416,10 @@ async function handleSaveDocumentForm(e) {
           author: document.getElementById('docFormAuthor').value.trim() || 'Phúc Nguyên Library',
           year: Number(document.getElementById('docFormYear').value) || new Date().getFullYear(),
           pages: Number(document.getElementById('docFormPages').value) || 1,
-          fileType,
-          fileSize,
+          fileType: isCreatingNote ? 'NOTE' : fileType,
+          fileSize: isCreatingNote ? 'Văn bản Ghi chú' : fileSize,
+          isNote: isCreatingNote || Boolean(old.isNote),
+          noteContent: updatedNoteContent,
           driveFileId: driveFileId || old.driveFileId,
           driveUrl: driveUrlInput || old.driveUrl,
           cloudFileUrl: cloudFileUrl || old.cloudFileUrl || '',
@@ -1300,14 +1428,19 @@ async function handleSaveDocumentForm(e) {
           coverUrl: AppState.pendingCoverDataUrl,
           accessLevel: document.getElementById('docFormAccess').value,
           tags,
-          description: document.getElementById('docFormDesc').value.trim()
+          description:
+            document.getElementById('docFormDesc').value.trim() ||
+            (isCreatingNote ? stripHtmlToText(updatedNoteContent).slice(0, 180) : '')
         };
         showToast('Đã cập nhật hồ sơ và đồng bộ lên Cloud thành công!');
       }
     } else {
+      const initialNoteHtml = isCreatingNote
+        ? noteHtmlInput || `<h2>${escapeHtml(titleVal)}</h2><p>Nhập nội dung soạn thảo văn bản tại đây...</p>`
+        : '';
       const newDoc = {
         id: 'doc-' + Date.now(),
-        code: document.getElementById('docFormCode').value.trim() || `PN-${Date.now()}`,
+        code: document.getElementById('docFormCode').value.trim() || (isCreatingNote ? `GC-${new Date().getFullYear()}-${String(AppState.documents.length + 1).padStart(3, '0')}` : `PN-${Date.now()}`),
         title: titleVal,
         collectionId: colId,
         author: document.getElementById('docFormAuthor').value.trim() || 'Phúc Nguyên Library',
@@ -1315,8 +1448,10 @@ async function handleSaveDocumentForm(e) {
         pages: Number(document.getElementById('docFormPages').value) || 1,
         views: 1,
         downloads: 0,
-        fileType,
-        fileSize,
+        fileType: isCreatingNote ? 'NOTE' : fileType,
+        fileSize: isCreatingNote ? 'Văn bản Ghi chú' : fileSize,
+        isNote: isCreatingNote,
+        noteContent: initialNoteHtml,
         driveFileId,
         driveUrl: driveUrlInput,
         cloudFileUrl,
@@ -1324,10 +1459,12 @@ async function handleSaveDocumentForm(e) {
         localFileUrl,
         coverUrl: AppState.pendingCoverDataUrl || '',
         accessLevel: document.getElementById('docFormAccess').value,
-        tags,
-        description: document.getElementById('docFormDesc').value.trim(),
+        tags: isCreatingNote && tags.length === 0 ? ['Ghi chú', 'Văn bản soạn thảo'] : tags,
+        description:
+          document.getElementById('docFormDesc').value.trim() ||
+          (isCreatingNote ? stripHtmlToText(initialNoteHtml).slice(0, 180) : ''),
         createdAt: new Date().toISOString().slice(0, 10),
-        uploadedBy: AppState.currentUser ? AppState.currentUser.fullName : 'Admin'
+        uploadedBy: AppState.currentUser ? AppState.currentUser.fullName : 'Quản trị viên Phúc Nguyên Library'
       };
       AppState.documents.unshift(newDoc);
       showToast('Đã đẩy hồ sơ lên thư viện và đồng bộ cho mọi thiết bị!');
@@ -1446,9 +1583,11 @@ function renderCatalog() {
   const countEl = document.getElementById('resultsCountNumber');
   const currentColTitleEl = document.getElementById('currentCollectionSubtitle');
   const breadcrumbEl = document.getElementById('collectionBreadcrumbBar');
+  const notesBannerEl = document.getElementById('notesSectionBanner');
 
   if (AppState.security.requireLoginToView && !AppState.currentUser) {
     countEl.textContent = '0';
+    if (notesBannerEl) notesBannerEl.style.display = 'none';
     container.className = '';
     container.innerHTML = `
       <div style="background:#fff;padding:42px;text-align:center;border:1px solid #e5e7eb;border-radius:6px;">
@@ -1459,6 +1598,40 @@ function renderCatalog() {
       </div>
     `;
     return;
+  }
+
+  const inNotesSection = isNoteCollection(AppState.selectedCollectionId);
+  if (notesBannerEl) {
+    if (inNotesSection) {
+      notesBannerEl.style.display = 'block';
+      notesBannerEl.innerHTML = `
+        <div class="notes-hub-banner">
+          <div class="notes-hub-banner-left">
+            <h3><i class="fa-solid fa-file-pen"></i> Mục Ghi chú &amp; Soạn thảo Văn bản trực tiếp trong File</h3>
+            <p>Tạo file văn bản mới, soạn thảo trực tiếp ngay trong chính file được tạo ra, sau đó lưu lại và chuyển vào các File / Hồ sơ hoặc Thư mục cụ thể.</p>
+          </div>
+          <div class="notes-quick-create-bar">
+            <input
+              type="text"
+              id="quickNoteTitleInput"
+              class="notes-quick-input"
+              placeholder="Nhập tên văn bản ghi chú cần tạo..."
+              onkeydown="if(event.key==='Enter'){event.preventDefault();handleQuickCreateNoteFile(this.value);}"
+            />
+            <button
+              type="button"
+              class="btn btn-primary"
+              style="background:#d97706;height:38px;font-weight:600;"
+              onclick="handleQuickCreateNoteFile(document.getElementById('quickNoteTitleInput') ? document.getElementById('quickNoteTitleInput').value : '')"
+            >
+              <i class="fa-solid fa-file-circle-plus"></i> + Tạo File &amp; Soạn thảo ngay
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      notesBannerEl.style.display = 'none';
+    }
   }
 
   const filtered = getFilteredDocuments();
@@ -1492,21 +1665,32 @@ function renderCatalog() {
     container.className = '';
     container.innerHTML = `
       <div style="background:#fff;padding:44px 20px;text-align:center;border:1px solid #e5e7eb;border-radius:6px;color:#6b7280;">
-        <i class="fa-regular fa-folder-open" style="font-size:38px;color:var(--pn-primary);opacity:0.65;margin-bottom:12px;"></i>
-        <h4 style="color:var(--pn-primary);font-size:16px;margin-bottom:6px;">Chưa có tài liệu nào trong mục này</h4>
-        <p style="font-size:13.5px;margin-bottom:16px;">Hãy tạo Thư mục Bộ sưu tập hoặc gắn/tải tài liệu từ Google Drive lên thư viện.</p>
-        ${
-          canManageDocs()
-            ? `<div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
-                 <button class="btn btn-outline" onclick="openCollectionsManagerModal()">
-                   <i class="fa-solid fa-folder-plus"></i> 1. Thiết kế Thư mục Bộ sưu tập
+        <i class="fa-solid ${inNotesSection ? 'fa-file-pen' : 'fa-folder-open'}" style="font-size:38px;color:${inNotesSection ? '#d97706' : 'var(--pn-primary)'};opacity:0.75;margin-bottom:12px;"></i>
+        <h4 style="color:var(--pn-primary);font-size:16px;margin-bottom:6px;">
+          ${inNotesSection ? 'Chưa có văn bản ghi chú nào trong mục Ghi chú' : 'Chưa có tài liệu nào trong mục này'}
+        </h4>
+        <p style="font-size:13.5px;margin-bottom:16px;">
+          ${
+            inNotesSection
+              ? 'Nhấn nút bên dưới để tạo File văn bản mới và soạn thảo trực tiếp ngay trong file, sau đó lưu và chuyển vào các file cụ thể.'
+              : 'Hãy tạo văn bản bằng Ghi chú, tạo Thư mục Bộ sưu tập hoặc gắn/tải tài liệu từ Google Drive lên thư viện.'
+          }
+        </p>
+        <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" style="background:#d97706;" onclick="handleQuickCreateNoteFile()">
+            <i class="fa-solid fa-file-pen"></i> + Tạo Văn bản bằng Ghi chú (Soạn thảo trực tiếp)
+          </button>
+          ${
+            canManageDocs()
+              ? `<button class="btn btn-outline" onclick="openCollectionsManagerModal()">
+                   <i class="fa-solid fa-folder-plus"></i> Thiết kế Thư mục Bộ sưu tập
                  </button>
                  <button class="btn btn-primary" onclick="openAddDocumentModal('drive_link')">
-                   <i class="fa-brands fa-google-drive"></i> 2. Gắn / Tải Tài liệu lên
-                 </button>
-               </div>`
-            : ''
-        }
+                   <i class="fa-brands fa-google-drive"></i> Gắn / Tải Tài liệu Drive
+                 </button>`
+              : ''
+          }
+        </div>
       </div>
     `;
     return;
@@ -1530,26 +1714,53 @@ function selectCollectionById(colId) {
 const ICON_BOOK_STAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>`;
 const ICON_DL_STAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
 
+function renderNotePaperCover(doc) {
+  const plainText = stripHtmlToText(doc.noteContent || doc.description || '') || 'Nhấn để mở file và soạn thảo nội dung trực tiếp...';
+  return `
+    <div class="note-cover-sheet">
+      <div class="note-cover-header"><i class="fa-solid fa-file-pen"></i> VĂN BẢN GHI CHÚ</div>
+      <div class="note-cover-title">${escapeHtml(doc.title)}</div>
+      <div class="note-cover-excerpt">${escapeHtml(plainText)}</div>
+    </div>
+  `;
+}
+
 function renderGridCard(doc) {
-  const fType = (doc.fileType || 'PDF').toLowerCase();
+  const isNote = isNoteDocument(doc);
+  const fType = isNote ? 'note' : (doc.fileType || 'PDF').toLowerCase();
   const coverContent = doc.coverUrl
     ? `<img class="custom-cover" src="${escapeHtml(doc.coverUrl)}" alt="${escapeHtml(doc.title)}" />`
+    : isNote
+    ? renderNotePaperCover(doc)
     : OU_BOOK_EMBLEM_SVG;
 
   const hasDrive = Boolean(doc.driveFileId || doc.driveUrl || doc.localBlobId || doc.localFileUrl);
+  const linkedTarget = doc.linkedDocId ? AppState.documents.find((d) => d.id === doc.linkedDocId) : null;
+  const attachedCount = Array.isArray(doc.attachedNotes) ? doc.attachedNotes.length : 0;
 
   return `
     <article class="doc-card">
-      <div class="doc-cover-wrapper" onclick="openDocumentDetail('${escapeHtml(doc.id)}')" title="Nhấn để xem chi tiết & đọc tài liệu">
+      <div class="doc-cover-wrapper" onclick="openDocumentDetail('${escapeHtml(doc.id)}')" title="${isNote ? 'Nhấn để mở file & soạn thảo trực tiếp' : 'Nhấn để xem chi tiết & đọc tài liệu'}">
         <div class="book-3d-frame">
           ${coverContent}
-          <span class="doc-filetype-badge ${escapeHtml(fType)}">${escapeHtml(doc.fileType || 'PDF')}</span>
+          <span class="doc-filetype-badge ${escapeHtml(fType)}">${escapeHtml(isNote ? 'NOTE' : doc.fileType || 'PDF')}</span>
           ${hasDrive ? `<span class="doc-drive-badge" title="Đã kết nối Google Drive"><i class="fa-brands fa-google-drive"></i></span>` : ''}
         </div>
       </div>
       <div class="doc-title" onclick="openDocumentDetail('${escapeHtml(doc.id)}')" title="${escapeHtml(doc.title)}">
         ${escapeHtml(doc.title)}
       </div>
+      ${
+        linkedTarget
+          ? `<div class="note-linked-pill" title="Đã chuyển/gắn vào file: ${escapeHtml(linkedTarget.title)}">
+               <i class="fa-solid fa-paperclip"></i> File: ${escapeHtml(linkedTarget.title)}
+             </div>`
+          : attachedCount > 0
+          ? `<div class="note-linked-pill" title="Có ${attachedCount} văn bản ghi chú đính kèm">
+               <i class="fa-solid fa-file-pen"></i> ${attachedCount} ghi chú đính kèm
+             </div>`
+          : ''
+      }
       <div class="doc-meta-stats">
         <span class="doc-stat-item" title="Lượt xem">
           ${ICON_BOOK_STAT} ${Number(doc.views) || 0}
@@ -1558,16 +1769,33 @@ function renderGridCard(doc) {
           ${ICON_DL_STAT} ${Number(doc.downloads) || 0}
         </span>
       </div>
-      <button class="btn-detail" onclick="openDocumentDetail('${escapeHtml(doc.id)}')">Chi tiết</button>
+      <div style="display:flex;gap:5px;margin-top:auto;">
+        <button class="btn-detail" style="flex:1;font-size:12.5px;padding:0 6px;" onclick="openDocumentDetail('${escapeHtml(doc.id)}')">
+          ${isNote ? '<i class="fa-solid fa-pen-to-square"></i> Soạn thảo' : 'Chi tiết'}
+        </button>
+        ${
+          isNote
+            ? `<button class="btn btn-outline" style="height:36px;padding:0 8px;font-size:12px;color:#b45309;border-color:#f59e0b;" onclick="openTransferNoteModal('${escapeHtml(doc.id)}')" title="Chuyển văn bản này vào File hoặc Thư mục cụ thể">
+                 <i class="fa-solid fa-share-from-square"></i>
+               </button>`
+            : ''
+        }
+        <button class="btn btn-danger" style="height:36px;padding:0 9px;font-size:12px;" onclick="handleDeleteDocument('${escapeHtml(doc.id)}', event)" title="Xóa file này">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
     </article>
   `;
 }
 
 function renderListRow(doc) {
+  const isNote = isNoteDocument(doc);
   const col = AppState.collections.find((c) => c.id === doc.collectionId);
   const colName = col ? col.name : 'Thư mục chung';
   const coverContent = doc.coverUrl
     ? `<img class="custom-cover" src="${escapeHtml(doc.coverUrl)}" alt="${escapeHtml(doc.title)}" />`
+    : isNote
+    ? renderNotePaperCover(doc)
     : OU_BOOK_EMBLEM_SVG;
 
   return `
@@ -1585,28 +1813,101 @@ function renderListRow(doc) {
           <span><i class="fa-regular fa-folder"></i> ${escapeHtml(colName)}</span>
           <span><i class="fa-regular fa-user"></i> ${escapeHtml(doc.author || 'Đang cập nhật')}</span>
           <span><i class="fa-regular fa-calendar"></i> Năm: ${escapeHtml(String(doc.year || '---'))}</span>
-          <span><i class="fa-regular fa-file"></i> ${escapeHtml(doc.fileType || 'PDF')} (${escapeHtml(doc.fileSize || '---')})</span>
+          <span><i class="fa-regular fa-file"></i> ${escapeHtml(isNote ? 'NOTE (Văn bản Ghi chú)' : doc.fileType || 'PDF')} (${escapeHtml(doc.fileSize || '---')})</span>
           <span><i class="fa-regular fa-eye"></i> ${Number(doc.views) || 0} lượt xem</span>
           <span><i class="fa-solid fa-download"></i> ${Number(doc.downloads) || 0} lượt tải</span>
         </div>
-        <p class="doc-list-desc">${escapeHtml(doc.description || 'Không có mô tả.')}</p>
+        <p class="doc-list-desc">${escapeHtml(doc.description || stripHtmlToText(doc.noteContent || '') || 'Không có mô tả.')}</p>
       </div>
       <div class="doc-list-actions">
-        <button class="btn-detail" onclick="openDocumentDetail('${escapeHtml(doc.id)}')">Chi tiết & Xem</button>
+        <button class="btn-detail" onclick="openDocumentDetail('${escapeHtml(doc.id)}')">
+          ${isNote ? '<i class="fa-solid fa-pen-to-square"></i> Mở & Soạn thảo' : 'Chi tiết & Xem'}
+        </button>
         ${
-          canManageDocs()
-            ? `<button class="btn btn-outline" style="justify-content:center;font-size:12px;padding:5px 10px;" onclick="openEditDocumentModal('${escapeHtml(doc.id)}')"><i class="fa-regular fa-pen-to-square"></i> Sửa hồ sơ</button>`
+          isNote
+            ? `<button class="btn btn-outline" style="justify-content:center;font-size:12px;padding:5px 10px;color:#b45309;border-color:#f59e0b;" onclick="openTransferNoteModal('${escapeHtml(doc.id)}')">
+                 <i class="fa-solid fa-share-from-square"></i> Chuyển vào File...
+               </button>`
             : ''
         }
+        <button class="btn btn-outline" style="justify-content:center;font-size:12px;padding:5px 10px;" onclick="openEditDocumentModal('${escapeHtml(doc.id)}')">
+          <i class="fa-regular fa-pen-to-square"></i> Sửa thông tin
+        </button>
+        <button class="btn btn-danger" style="justify-content:center;font-size:12px;padding:5px 10px;" onclick="handleDeleteDocument('${escapeHtml(doc.id)}', event)">
+          <i class="fa-regular fa-trash-can"></i> Xóa file
+        </button>
       </div>
     </div>
   `;
 }
 
 // ==========================================================================
-// CHI TIẾT HỒ SƠ & XEM TRƯỚC TRỰC TIẾP
+// TẠO FILE VĂN BẢN GHI CHÚ, SOẠN THẢO TRONG CHÍNH FILE & CHUYỂN VÀO FILE CỤ THỂ
 // ==========================================================================
-async function openDocumentDetail(docId) {
+let _noteAutoSaveTimer = null;
+
+function handleQuickCreateNoteFile(customTitle = '', targetCollectionId = '') {
+  ensureNotesCollectionExists();
+  const noteColId =
+    targetCollectionId ||
+    (AppState.selectedCollectionId && AppState.selectedCollectionId !== 'all'
+      ? AppState.selectedCollectionId
+      : getNotesCollectionId());
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('vi-VN');
+  const seq = String(AppState.documents.length + 1).padStart(3, '0');
+  const cleanTitle = (customTitle || '').trim() || `Văn bản ghi chú mới (${dateStr} - #${seq})`;
+  const newId = 'doc-note-' + Date.now();
+  const code = `GC-${now.getFullYear()}-${seq}`;
+
+  const initialHtml = `<h2>${escapeHtml(cleanTitle)}</h2><p><i>Ngày tạo: ${escapeHtml(dateStr)}</i></p><p>Bắt đầu soạn thảo nội dung văn bản tại đây...</p>`;
+
+  const newNoteDoc = {
+    id: newId,
+    code,
+    title: cleanTitle,
+    collectionId: noteColId,
+    author: AppState.currentUser ? AppState.currentUser.fullName : 'Phúc Nguyên Library',
+    year: now.getFullYear(),
+    pages: 1,
+    views: 1,
+    downloads: 0,
+    fileType: 'NOTE',
+    fileSize: 'Văn bản Ghi chú',
+    isNote: true,
+    noteContent: initialHtml,
+    driveFileId: '',
+    driveUrl: '',
+    localBlobId: '',
+    localFileUrl: '',
+    coverUrl: '',
+    accessLevel: 'public',
+    tags: ['Ghi chú', 'Văn bản soạn thảo'],
+    description: 'Văn bản soạn thảo trực tiếp trong mục Ghi chú.',
+    createdAt: now.toISOString().slice(0, 10),
+    uploadedBy: AppState.currentUser ? AppState.currentUser.fullName : 'Quản trị viên Phúc Nguyên Library'
+  };
+
+  AppState.documents.unshift(newNoteDoc);
+  AppState.selectedCollectionId = noteColId;
+
+  const quickInput = document.getElementById('quickNoteTitleInput');
+  if (quickInput) quickInput.value = '';
+
+  saveDocuments();
+  populateFilterDropdowns();
+  renderCollectionsSidebar();
+  renderCatalog();
+
+  showToast(`Đã tạo file "${cleanTitle}"! Bạn có thể soạn thảo ngay trong file.`);
+  openDocumentDetail(newId, 'note');
+}
+
+// ==========================================================================
+// CHI TIẾT HỒ SƠ, SOẠN THẢO TRỰC TIẾP TRONG FILE & XEM TRƯỚC
+// ==========================================================================
+async function openDocumentDetail(docId, preferredMode = '') {
   const doc = AppState.documents.find((d) => d.id === docId);
   if (!doc) return;
 
@@ -1616,13 +1917,25 @@ async function openDocumentDetail(docId) {
   saveDocuments();
   renderCatalog();
 
-  const colPath = getCollectionPath(doc.collectionId);
-  const colName = colPath.length > 0 ? colPath.map((c) => c.name).join(' / ') : 'Thư mục chung';
-
   if (doc.localBlobId && !doc.localFileUrl) {
     const blobUrl = await DriveService.getBlobUrlFromIndexedDB(doc.localBlobId);
     if (blobUrl) doc.localFileUrl = blobUrl;
   }
+
+  renderDetailMetaPanel(doc);
+
+  const isNote = isNoteDocument(doc);
+  const hasExternalFile = Boolean(DriveService.getEmbedPreviewUrl(doc));
+  const initialMode = preferredMode || (isNote && !hasExternalFile ? 'note' : 'file');
+
+  renderDocumentPreviewPane(doc, initialMode);
+  openModal('detailModal');
+}
+
+function renderDetailMetaPanel(doc) {
+  const isNote = isNoteDocument(doc);
+  const colPath = getCollectionPath(doc.collectionId);
+  const colName = colPath.length > 0 ? colPath.map((c) => c.name).join(' / ') : 'Thư mục chung';
 
   document.getElementById('detailModalTitle').textContent = doc.title;
 
@@ -1632,17 +1945,65 @@ async function openDocumentDetail(docId) {
       : '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:12px;">Công khai</span>';
 
   const fileId = DriveService.extractFileId(doc.driveFileId || doc.driveUrl);
+  const linkedTarget = doc.linkedDocId ? AppState.documents.find((d) => d.id === doc.linkedDocId) : null;
+
+  // Tìm các văn bản ghi chú đã được chuyển/đính kèm vào hồ sơ này
+  const linkedNotes = AppState.documents.filter((d) => d.id !== doc.id && d.linkedDocId === doc.id);
+  const embeddedAttachedNotes = Array.isArray(doc.attachedNotes) ? doc.attachedNotes : [];
+
+  let attachedNotesHtml = '';
+  if (linkedNotes.length > 0 || embeddedAttachedNotes.length > 0) {
+    attachedNotesHtml = `
+      <div style="margin-top:12px;background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:10px 12px;">
+        <div style="font-size:12.5px;font-weight:700;color:#92400e;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+          <span><i class="fa-solid fa-paperclip"></i> Văn bản Ghi chú đã chuyển vào File này:</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${linkedNotes
+            .map(
+              (ln) => `
+              <div style="background:#fff;border:1px solid #fcd34d;border-radius:4px;padding:6px 8px;display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px;">
+                <span style="font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(ln.title)}">
+                  <i class="fa-solid fa-file-pen" style="color:#d97706;"></i> ${escapeHtml(ln.title)}
+                </span>
+                <button class="btn btn-outline" style="padding:2px 7px;font-size:11px;flex-shrink:0;" onclick="openDocumentDetail('${escapeHtml(ln.id)}', 'note')">
+                  Mở soạn thảo
+                </button>
+              </div>
+            `
+            )
+            .join('')}
+          ${embeddedAttachedNotes
+            .map(
+              (an) => `
+              <div style="background:#fff;border:1px solid #fcd34d;border-radius:4px;padding:6px 8px;font-size:12px;">
+                <div style="font-weight:600;color:#92400e;">${escapeHtml(an.title || 'Ghi chú đính kèm')} <span style="font-weight:400;color:#64748b;">(${escapeHtml(an.transferredAt || '')})</span></div>
+                <div style="color:#334155;margin-top:3px;max-height:80px;overflow-y:auto;">${an.content || ''}</div>
+              </div>
+            `
+            )
+            .join('')}
+        </div>
+      </div>
+    `;
+  }
 
   document.getElementById('detailMetaContainer').innerHTML = `
     <div style="display:flex;gap:14px;align-items:flex-start;">
       <div style="width:92px;height:122px;flex-shrink:0;">
         <div class="book-3d-frame">
-          ${doc.coverUrl ? `<img class="custom-cover" src="${escapeHtml(doc.coverUrl)}" />` : OU_BOOK_EMBLEM_SVG}
+          ${
+            doc.coverUrl
+              ? `<img class="custom-cover" src="${escapeHtml(doc.coverUrl)}" />`
+              : isNote
+              ? renderNotePaperCover(doc)
+              : OU_BOOK_EMBLEM_SVG
+          }
         </div>
       </div>
       <div>
         <div style="font-size:12px;color:#64748b;margin-bottom:4px;">Mã hồ sơ: <strong>${escapeHtml(doc.code || doc.id)}</strong></div>
-        <h4 style="font-size:15px;color:var(--pn-primary);margin-bottom:6px;line-height:1.35;">${escapeHtml(doc.title)}</h4>
+        <h4 id="detailMetaTitleHeading" style="font-size:15px;color:var(--pn-primary);margin-bottom:6px;line-height:1.35;">${escapeHtml(doc.title)}</h4>
         ${accessBadge}
       </div>
     </div>
@@ -1652,6 +2013,18 @@ async function openDocumentDetail(docId) {
         <th>Bộ sưu tập:</th>
         <td>${escapeHtml(colName)}</td>
       </tr>
+      ${
+        linkedTarget
+          ? `<tr>
+               <th>Thuộc File cụ thể:</th>
+               <td>
+                 <a href="#" onclick="event.preventDefault();openDocumentDetail('${escapeHtml(linkedTarget.id)}')" style="color:#b45309;font-weight:600;">
+                   <i class="fa-solid fa-paperclip"></i> [${escapeHtml(linkedTarget.code || linkedTarget.id)}] ${escapeHtml(linkedTarget.title)}
+                 </a>
+               </td>
+             </tr>`
+          : ''
+      }
       <tr>
         <th>Tác giả / Cơ quan:</th>
         <td>${escapeHtml(doc.author || '---')}</td>
@@ -1662,19 +2035,15 @@ async function openDocumentDetail(docId) {
       </tr>
       <tr>
         <th>Định dạng / Cỡ:</th>
-        <td><span style="font-weight:700;color:var(--pn-accent);">${escapeHtml(doc.fileType || 'PDF')}</span> (${escapeHtml(doc.fileSize || '---')})</td>
-      </tr>
-      <tr>
-        <th>Số trang:</th>
-        <td>${escapeHtml(String(doc.pages || '---'))} trang</td>
+        <td><span style="font-weight:700;color:${isNote ? '#d97706' : 'var(--pn-accent)'};">${escapeHtml(isNote ? 'NOTE (Văn bản Ghi chú)' : doc.fileType || 'PDF')}</span> (${escapeHtml(doc.fileSize || '---')})</td>
       </tr>
       <tr>
         <th>Thống kê:</th>
         <td><strong>${doc.views}</strong> lượt xem &bull; <strong>${doc.downloads}</strong> lượt tải</td>
       </tr>
       <tr>
-        <th>Google Drive ID:</th>
-        <td>${fileId ? `<code>${escapeHtml(fileId)}</code>` : '<span style="color:#64748b;">Lưu cục bộ trên trình duyệt</span>'}</td>
+        <th>Nguồn lưu trữ:</th>
+        <td>${fileId ? `Google Drive (<code>${escapeHtml(fileId)}</code>)` : isNote ? '<span style="color:#b45309;font-weight:600;">Văn bản Cloud (Soạn thảo trực tiếp)</span>' : '<span style="color:#64748b;">Lưu trên Cloud / Trình duyệt</span>'}</td>
       </tr>
       <tr>
         <th>Ngày cập nhật:</th>
@@ -1688,10 +2057,18 @@ async function openDocumentDetail(docId) {
 
     <div style="margin-top:12px;font-size:13px;color:#334155;background:#fff;padding:10px;border-radius:4px;border:1px solid #e2e8f0;">
       <strong>Tóm tắt nội dung hồ sơ:</strong>
-      <p style="margin-top:4px;color:#475569;">${escapeHtml(doc.description || 'Chưa có mô tả chi tiết.')}</p>
+      <p id="detailMetaDescText" style="margin-top:4px;color:#475569;">${escapeHtml(doc.description || 'Chưa có mô tả chi tiết.')}</p>
     </div>
 
+    ${attachedNotesHtml}
+
     <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-primary" style="background:#d97706;" onclick="renderDocumentPreviewPane(AppState.documents.find(d=>d.id==='${escapeHtml(doc.id)}'), 'note')">
+        <i class="fa-solid fa-file-pen"></i> Soạn thảo trong File
+      </button>
+      <button class="btn btn-outline" style="color:#b45309;border-color:#f59e0b;font-weight:600;" onclick="openTransferNoteModal('${escapeHtml(doc.id)}')">
+        <i class="fa-solid fa-share-from-square"></i> Chuyển vào File cụ thể...
+      </button>
       <button class="btn btn-primary" onclick="handleDownloadDocument('${escapeHtml(doc.id)}')">
         <i class="fa-solid fa-download"></i> Tải xuống (${doc.downloads})
       </button>
@@ -1702,26 +2079,58 @@ async function openDocumentDetail(docId) {
              </a>`
           : ''
       }
-      ${
-        canManageDocs()
-          ? `<button class="btn btn-outline" onclick="closeModal('detailModal'); openEditDocumentModal('${escapeHtml(doc.id)}')">
-              <i class="fa-regular fa-pen-to-square"></i> Sửa / Gắn link Drive
-             </button>
-             <button class="btn btn-danger" onclick="handleDeleteDocument('${escapeHtml(doc.id)}')">
-              <i class="fa-regular fa-trash-can"></i> Xóa
-             </button>`
-          : ''
-      }
+      <button class="btn btn-outline" onclick="closeModal('detailModal'); openEditDocumentModal('${escapeHtml(doc.id)}')">
+        <i class="fa-regular fa-pen-to-square"></i> Sửa thông tin
+      </button>
+      <button class="btn btn-danger" onclick="handleDeleteDocument('${escapeHtml(doc.id)}')">
+        <i class="fa-regular fa-trash-can"></i> Xóa file
+      </button>
     </div>
   `;
-
-  renderDocumentPreviewPane(doc);
-  openModal('detailModal');
 }
 
-function renderDocumentPreviewPane(doc) {
+function renderDocumentPreviewPane(doc, mode = 'file') {
+  if (!doc) return;
   const previewContainer = document.getElementById('detailPreviewContainer');
+  const toolbarEl = document.getElementById('detailPreviewToolbar');
   const embedUrl = DriveService.getEmbedPreviewUrl(doc);
+  const isNote = isNoteDocument(doc);
+  const activeMode = mode === 'note' || (isNote && !embedUrl) ? 'note' : 'file';
+
+  if (toolbarEl) {
+    toolbarEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button
+          type="button"
+          class="preview-mode-switch-btn ${activeMode === 'note' ? 'active' : ''}"
+          onclick="renderDocumentPreviewPane(AppState.documents.find(d=>d.id==='${escapeHtml(doc.id)}'), 'note')"
+        >
+          <i class="fa-solid fa-file-pen"></i> Soạn thảo Văn bản trực tiếp trong File
+        </button>
+        ${
+          embedUrl
+            ? `<button
+                 type="button"
+                 class="preview-mode-switch-btn ${activeMode === 'file' ? 'active' : ''}"
+                 onclick="renderDocumentPreviewPane(AppState.documents.find(d=>d.id==='${escapeHtml(doc.id)}'), 'file')"
+               >
+                 <i class="fa-solid fa-eye"></i> Xem File gốc (Google Drive / PDF)
+               </button>`
+            : ''
+        }
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="inFileAutoSaveBadge" style="font-size:12px;color:#fde68a;">
+          ${activeMode === 'note' ? '<i class="fa-solid fa-pen-nib"></i> Chế độ soạn thảo trực tiếp' : 'Hỗ trợ phóng to, in ấn và tải về'}
+        </span>
+      </div>
+    `;
+  }
+
+  if (activeMode === 'note') {
+    renderInFileNoteEditor(doc, previewContainer);
+    return;
+  }
 
   if (embedUrl) {
     if ((doc.fileType || '').toUpperCase() === 'IMAGE') {
@@ -1738,30 +2147,518 @@ function renderDocumentPreviewPane(doc) {
     return;
   }
 
-  previewContainer.innerHTML = `
-    <div style="background:#fff;width:90%;max-width:600px;margin:24px auto;padding:32px;border-radius:4px;box-shadow:0 10px 25px rgba(0,0,0,0.35);color:#1e293b;">
-      <div style="border-bottom:2px solid var(--pn-primary);padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12px;font-weight:700;color:var(--pn-primary);text-transform:uppercase;">PHÚC NGUYÊN LIBRARY &bull; ${escapeHtml(doc.code || doc.id)}</span>
-        <span style="background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${escapeHtml(doc.fileType || 'PDF')}</span>
+  // Nếu chưa có file Drive đính kèm, mở thẳng trình soạn thảo trong file
+  renderInFileNoteEditor(doc, previewContainer);
+}
+
+function renderInFileNoteEditor(doc, container) {
+  const otherDocs = AppState.documents.filter((d) => d.id !== doc.id);
+  const treeCols = getAllCollectionsTreeForSelect(null);
+
+  const otherDocsOptionsHtml =
+    `<option value="">-- Chọn File / Hồ sơ cụ thể để chuyển vào --</option>` +
+    otherDocs
+      .map(
+        (d) =>
+          `<option value="${escapeHtml(d.id)}" ${doc.linkedDocId === d.id ? 'selected' : ''}>[${escapeHtml(d.code || d.id)}] ${escapeHtml(d.title)}</option>`
+      )
+      .join('');
+
+  const colsOptionsHtml =
+    `<option value="all">-- Tất cả bộ sưu tập --</option>` +
+    treeCols
+      .map((c) => {
+        const prefix = '— '.repeat(c.level);
+        return `<option value="${escapeHtml(c.id)}" ${doc.collectionId === c.id ? 'selected' : ''}>${prefix}${escapeHtml(c.name)}</option>`;
+      })
+      .join('');
+
+  const initialHtml =
+    doc.noteContent ||
+    (doc.description ? `<p>${escapeHtml(doc.description)}</p>` : `<h2>${escapeHtml(doc.title)}</h2><p>Nhập nội dung soạn thảo tại đây...</p>`);
+
+  container.innerHTML = `
+    <div class="in-file-editor-wrapper">
+      <!-- Thanh tiêu đề & Lưu nhanh ngay trong File -->
+      <div class="in-file-top-bar">
+        <div class="in-file-title-group">
+          <i class="fa-solid fa-file-pen" style="color:#d97706;font-size:18px;"></i>
+          <input
+            type="text"
+            id="inFileTitleInput"
+            class="in-file-title-input"
+            value="${escapeHtml(doc.title)}"
+            placeholder="Nhập tiêu đề file văn bản..."
+            title="Sửa trực tiếp tên file văn bản"
+          />
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" style="background:#16a34a;padding:6px 12px;font-size:12.5px;" onclick="saveCurrentInFileNote('${escapeHtml(doc.id)}', true)">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu lại
+          </button>
+          <button type="button" class="btn btn-primary" style="background:#d97706;padding:6px 12px;font-size:12.5px;" onclick="saveCurrentInFileNote('${escapeHtml(doc.id)}', false); openTransferNoteModal('${escapeHtml(doc.id)}')">
+            <i class="fa-solid fa-share-from-square"></i> Chuyển vào File cụ thể...
+          </button>
+          <button type="button" class="btn btn-outline" style="padding:6px 10px;font-size:12px;" onclick="saveCurrentInFileNote('${escapeHtml(doc.id)}', false); exportNoteDocumentAsFile('${escapeHtml(doc.id)}', 'doc')" title="Tải về thành file Word (.doc)">
+            <i class="fa-solid fa-file-word" style="color:#2563eb;"></i> Xuất Word
+          </button>
+          <button type="button" class="btn btn-outline" style="padding:6px 10px;font-size:12px;" onclick="saveCurrentInFileNote('${escapeHtml(doc.id)}', false); printNoteDocument('${escapeHtml(doc.id)}')" title="In hoặc lưu thành PDF">
+            <i class="fa-solid fa-print"></i> In / PDF
+          </button>
+        </div>
       </div>
-      <h3 style="font-size:17px;color:#0f172a;margin-bottom:10px;">${escapeHtml(doc.title)}</h3>
-      <p style="font-size:13px;color:#475569;margin-bottom:14px;">
-        <strong>Tác giả / Đơn vị:</strong> ${escapeHtml(doc.author || '---')} &nbsp;|&nbsp; <strong>Năm:</strong> ${escapeHtml(String(doc.year || '---'))}
-      </p>
-      <div style="background:#f8fafc;border-left:3px solid var(--pn-gold);padding:12px 14px;font-size:13.5px;color:#334155;line-height:1.6;margin-bottom:18px;">
-        ${escapeHtml(doc.description || '')}
+
+      <!-- Thanh công cụ định dạng văn bản (Rich Text Toolbar) -->
+      <div class="in-file-formatting-bar">
+        <select class="fmt-select" onchange="execInFileCmd('formatBlock', this.value); this.selectedIndex=0;">
+          <option value="">Kiểu đoạn văn...</option>
+          <option value="H1">Tiêu đề lớn (H1)</option>
+          <option value="H2">Tiêu đề mục (H2)</option>
+          <option value="H3">Tiêu đề con (H3)</option>
+          <option value="P">Đoạn văn chuẩn</option>
+          <option value="BLOCKQUOTE">Trích dẫn</option>
+        </select>
+
+        <select class="fmt-select" onchange="execInFileCmd('fontSize', this.value); this.selectedIndex=0;">
+          <option value="">Cỡ chữ...</option>
+          <option value="2">Nhỏ</option>
+          <option value="3">Bình thường</option>
+          <option value="4">Lớn vừa</option>
+          <option value="5">Lớn</option>
+          <option value="6">Rất lớn</option>
+        </select>
+
+        <span class="fmt-divider"></span>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('bold')" title="In đậm (Ctrl+B)"><b>B</b></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('italic')" title="In nghiêng (Ctrl+I)"><i>I</i></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('underline')" title="Gạch chân (Ctrl+U)"><u>U</u></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('strikeThrough')" title="Gạch ngang"><s>S</s></button>
+
+        <span class="fmt-divider"></span>
+        <label class="fmt-btn" title="Màu chữ" style="cursor:pointer;">
+          <i class="fa-solid fa-font" style="color:#dc2626;"></i>
+          <input type="color" value="#1e293b" style="width:14px;height:14px;border:none;padding:0;background:none;cursor:pointer;" onchange="execInFileCmd('foreColor', this.value)" />
+        </label>
+        <label class="fmt-btn" title="Tô sáng nền chữ" style="cursor:pointer;">
+          <i class="fa-solid fa-highlighter" style="color:#d97706;"></i>
+          <input type="color" value="#fef08a" style="width:14px;height:14px;border:none;padding:0;background:none;cursor:pointer;" onchange="execInFileCmd('hiliteColor', this.value)" />
+        </label>
+
+        <span class="fmt-divider"></span>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('justifyLeft')" title="Căn trái"><i class="fa-solid fa-align-left"></i></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('justifyCenter')" title="Căn giữa"><i class="fa-solid fa-align-center"></i></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('justifyRight')" title="Căn phải"><i class="fa-solid fa-align-right"></i></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('justifyFull')" title="Căn đều 2 bên"><i class="fa-solid fa-align-justify"></i></button>
+
+        <span class="fmt-divider"></span>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('insertUnorderedList')" title="Danh sách chấm"><i class="fa-solid fa-list-ul"></i></button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('insertOrderedList')" title="Danh sách đánh số"><i class="fa-solid fa-list-ol"></i></button>
+        <button type="button" class="fmt-btn" onclick="insertNoteChecklist()" title="Chèn mục công việc"><i class="fa-regular fa-square-check"></i></button>
+        <button type="button" class="fmt-btn" onclick="insertNoteTable()" title="Chèn bảng biểu"><i class="fa-solid fa-table"></i> Bảng</button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('insertHorizontalRule')" title="Chèn đường kẻ ngang"><i class="fa-solid fa-minus"></i></button>
+        <button type="button" class="fmt-btn" onclick="insertNoteTimestamp()" title="Chèn ngày giờ hiện tại"><i class="fa-regular fa-clock"></i> Ngày</button>
+        <button type="button" class="fmt-btn" onclick="execInFileCmd('removeFormat')" title="Xóa định dạng"><i class="fa-solid fa-eraser"></i></button>
       </div>
-      ${
-        canManageDocs()
-          ? `<div style="background:#eff6ff;border:1px dashed #93c5fd;border-radius:6px;padding:12px;font-size:13px;color:#1e3a8a;">
-               <button class="btn btn-primary" style="font-size:12.5px;padding:6px 12px;" onclick="closeModal('detailModal'); openEditDocumentModal('${escapeHtml(doc.id)}')">
-                 <i class="fa-brands fa-google-drive"></i> Gắn Link Google Drive cho tài liệu này
-               </button>
-             </div>`
-          : ''
-      }
+
+      <!-- Trang giấy soạn thảo trực tiếp ngay trong File -->
+      <div class="in-file-paper-scroll">
+        <div
+          id="inFileEditorSurface"
+          class="in-file-paper-sheet"
+          contenteditable="true"
+          data-placeholder="Nhập nội dung soạn thảo văn bản trực tiếp tại đây..."
+        >${initialHtml}</div>
+      </div>
+
+      <!-- Thanh Lưu & Chuyển nhanh vào File cụ thể / Thư mục cụ thể ngay dưới chân trình soạn thảo -->
+      <div class="in-file-transfer-bar">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;">
+          <strong style="color:#92400e;"><i class="fa-solid fa-file-import"></i> Chuyển vào File cụ thể:</strong>
+          <select id="quickInFileTargetDocSelect" class="fmt-select" style="min-width:210px;max-width:290px;">
+            ${otherDocsOptionsHtml}
+          </select>
+          <button type="button" class="btn btn-primary" style="background:#d97706;padding:5px 10px;font-size:12px;" onclick="handleQuickTransferInFile('${escapeHtml(doc.id)}')">
+            <i class="fa-solid fa-check"></i> Lưu &amp; Chuyển vào File này
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <strong style="color:var(--pn-primary);"><i class="fa-solid fa-folder-tree"></i> Thư mục:</strong>
+          <select id="quickInFileTargetColSelect" class="fmt-select" style="min-width:160px;">
+            ${colsOptionsHtml}
+          </select>
+          <button type="button" class="btn btn-outline" style="padding:5px 10px;font-size:12px;background:#fff;" onclick="handleQuickMoveFolderInFile('${escapeHtml(doc.id)}')">
+            Chuyển Thư mục
+          </button>
+        </div>
+      </div>
     </div>
   `;
+
+  const surface = document.getElementById('inFileEditorSurface');
+  const titleInput = document.getElementById('inFileTitleInput');
+
+  const triggerAutoSave = () => {
+    const badge = document.getElementById('inFileAutoSaveBadge');
+    if (badge) badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tự động lưu...`;
+    if (_noteAutoSaveTimer) clearTimeout(_noteAutoSaveTimer);
+    _noteAutoSaveTimer = setTimeout(() => {
+      saveCurrentInFileNote(doc.id, false);
+    }, 1000);
+  };
+
+  if (surface) {
+    surface.addEventListener('input', triggerAutoSave);
+    surface.addEventListener('keydown', (ev) => {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's') {
+        ev.preventDefault();
+        saveCurrentInFileNote(doc.id, true);
+      }
+    });
+  }
+
+  if (titleInput) {
+    titleInput.addEventListener('input', triggerAutoSave);
+  }
+}
+
+function execInFileCmd(cmd, value = null) {
+  const surface = document.getElementById('inFileEditorSurface');
+  if (!surface) return;
+  surface.focus();
+  document.execCommand(cmd, false, value);
+}
+
+function insertNoteTable() {
+  const html = `
+    <table>
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th>STT</th>
+          <th>Nội dung / Hạng mục</th>
+          <th>Ghi chú chi tiết</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>...</td><td>...</td></tr>
+        <tr><td>2</td><td>...</td><td>...</td></tr>
+      </tbody>
+    </table>
+    <p><br/></p>
+  `;
+  execInFileCmd('insertHTML', html);
+}
+
+function insertNoteChecklist() {
+  const html = `<p>☐ Mục công việc cần thực hiện...</p>`;
+  execInFileCmd('insertHTML', html);
+}
+
+function insertNoteTimestamp() {
+  const nowStr = new Date().toLocaleString('vi-VN');
+  execInFileCmd('insertHTML', `<strong>[${escapeHtml(nowStr)}]</strong> `);
+}
+
+function saveCurrentInFileNote(docId, showNotify = true) {
+  const doc = AppState.documents.find((d) => d.id === docId);
+  if (!doc) return;
+
+  const surface = document.getElementById('inFileEditorSurface');
+  const titleInput = document.getElementById('inFileTitleInput');
+
+  if (titleInput && titleInput.value.trim()) {
+    doc.title = titleInput.value.trim();
+  }
+
+  if (surface) {
+    doc.noteContent = surface.innerHTML;
+    const plain = stripHtmlToText(doc.noteContent);
+    if (plain) {
+      doc.description = plain.slice(0, 200);
+    }
+  }
+
+  if (!doc.driveFileId && !doc.driveUrl) {
+    doc.isNote = true;
+    doc.fileType = 'NOTE';
+    doc.fileSize = 'Văn bản Ghi chú';
+  }
+
+  doc.createdAt = new Date().toISOString().slice(0, 10);
+
+  const modalTitleEl = document.getElementById('detailModalTitle');
+  if (modalTitleEl) modalTitleEl.textContent = doc.title;
+  const metaHeading = document.getElementById('detailMetaTitleHeading');
+  if (metaHeading) metaHeading.textContent = doc.title;
+  const metaDesc = document.getElementById('detailMetaDescText');
+  if (metaDesc) metaDesc.textContent = doc.description || '';
+
+  saveDocuments();
+  renderCollectionsSidebar();
+  renderCatalog();
+
+  const badge = document.getElementById('inFileAutoSaveBadge');
+  if (badge) {
+    const timeStr = new Date().toLocaleTimeString('vi-VN');
+    badge.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> Đã lưu vào file (${timeStr})`;
+  }
+
+  if (showNotify) {
+    showToast(`Đã lưu nội dung văn bản "${doc.title}" và đồng bộ Cloud!`);
+  }
+}
+
+// ==========================================================================
+// CHUYỂN VĂN BẢN GHI CHÚ VÀO CÁC FILE CỤ THỂ HOẶC THƯ MỤC CỤ THỂ
+// ==========================================================================
+function openTransferNoteModal(docId) {
+  const doc = AppState.documents.find((d) => d.id === docId);
+  if (!doc) return;
+
+  document.getElementById('transferSourceNoteId').value = doc.id;
+  document.getElementById('transferSourceNoteTitle').textContent = `[${doc.code || doc.id}] ${doc.title}`;
+
+  const otherDocs = AppState.documents.filter((d) => d.id !== doc.id);
+  const targetDocSelect = document.getElementById('transferTargetDocSelect');
+  if (otherDocs.length === 0) {
+    targetDocSelect.innerHTML = `<option value="">-- Hiện chưa có hồ sơ/file nào khác trong thư viện --</option>`;
+  } else {
+    targetDocSelect.innerHTML = otherDocs
+      .map((d) => {
+        const col = AppState.collections.find((c) => c.id === d.collectionId);
+        const colLabel = col ? ` (${col.name})` : '';
+        return `<option value="${escapeHtml(d.id)}" ${doc.linkedDocId === d.id ? 'selected' : ''}>[${escapeHtml(d.code || d.id)}] ${escapeHtml(d.title)}${escapeHtml(colLabel)}</option>`;
+      })
+      .join('');
+  }
+
+  const treeCols = getAllCollectionsTreeForSelect(null);
+  const targetColSelect = document.getElementById('transferTargetColSelect');
+  targetColSelect.innerHTML =
+    `<option value="all">-- Tất cả bộ sưu tập (Thư mục chung) --</option>` +
+    treeCols
+      .map((c) => {
+        const prefix = '— '.repeat(c.level);
+        return `<option value="${escapeHtml(c.id)}" ${doc.collectionId === c.id ? 'selected' : ''}>${prefix}${escapeHtml(c.name)}</option>`;
+      })
+      .join('');
+
+  openModal('transferNoteModal');
+}
+
+function executeTransferNoteToTargetDoc(sourceDocId, targetDocId, actionMode = 'attach_and_move') {
+  const sourceDoc = AppState.documents.find((d) => d.id === sourceDocId);
+  const targetDoc = AppState.documents.find((d) => d.id === targetDocId);
+
+  if (!sourceDoc || !targetDoc) {
+    alert('Vui lòng chọn một File / Hồ sơ đích cụ thể để chuyển văn bản vào!');
+    return false;
+  }
+
+  const noteHtml =
+    sourceDoc.noteContent ||
+    `<p>${escapeHtml(sourceDoc.description || sourceDoc.title)}</p>`;
+  const nowStr = new Date().toLocaleString('vi-VN');
+
+  if (actionMode === 'merge_content') {
+    const separator = `<hr/><p><strong>[Nội dung chuyển từ Ghi chú: ${escapeHtml(sourceDoc.title)} - ${escapeHtml(nowStr)}]</strong></p>`;
+    targetDoc.noteContent = (targetDoc.noteContent || '') + separator + noteHtml;
+    sourceDoc.linkedDocId = targetDoc.id;
+  } else if (actionMode === 'replace_content') {
+    targetDoc.noteContent = noteHtml;
+    sourceDoc.linkedDocId = targetDoc.id;
+  } else {
+    // attach_and_move: Đính kèm vào hồ sơ đích và chuyển về cùng thư mục của hồ sơ đích
+    if (!Array.isArray(targetDoc.attachedNotes)) {
+      targetDoc.attachedNotes = [];
+    }
+    const existingIdx = targetDoc.attachedNotes.findIndex((n) => n.noteId === sourceDoc.id);
+    const noteEntry = {
+      noteId: sourceDoc.id,
+      title: sourceDoc.title,
+      code: sourceDoc.code,
+      content: noteHtml,
+      transferredAt: nowStr
+    };
+    if (existingIdx !== -1) {
+      targetDoc.attachedNotes[existingIdx] = noteEntry;
+    } else {
+      targetDoc.attachedNotes.unshift(noteEntry);
+    }
+    targetDoc.noteContent =
+      (targetDoc.noteContent || '') +
+      `<hr/><h3>${escapeHtml(sourceDoc.title)}</h3>` +
+      noteHtml;
+
+    sourceDoc.linkedDocId = targetDoc.id;
+    if (targetDoc.collectionId && targetDoc.collectionId !== 'all') {
+      sourceDoc.collectionId = targetDoc.collectionId;
+    }
+  }
+
+  saveDocuments();
+  renderCollectionsSidebar();
+  renderCatalog();
+  if (AppState.activeDocId === sourceDoc.id) {
+    renderDetailMetaPanel(sourceDoc);
+  }
+  showToast(`Đã chuyển văn bản "${sourceDoc.title}" vào file "${targetDoc.title}" thành công!`);
+  return true;
+}
+
+function handleConfirmTransferToSpecificFile() {
+  const sourceId = document.getElementById('transferSourceNoteId').value;
+  const targetId = document.getElementById('transferTargetDocSelect').value;
+  const actionMode = document.getElementById('transferTargetDocAction').value || 'attach_and_move';
+
+  if (executeTransferNoteToTargetDoc(sourceId, targetId, actionMode)) {
+    closeModal('transferNoteModal');
+  }
+}
+
+function handleQuickTransferInFile(sourceDocId) {
+  saveCurrentInFileNote(sourceDocId, false);
+  const selectEl = document.getElementById('quickInFileTargetDocSelect');
+  if (!selectEl || !selectEl.value) {
+    openTransferNoteModal(sourceDocId);
+    return;
+  }
+  executeTransferNoteToTargetDoc(sourceDocId, selectEl.value, 'attach_and_move');
+}
+
+function handleQuickMoveFolderInFile(sourceDocId) {
+  saveCurrentInFileNote(sourceDocId, false);
+  const selectEl = document.getElementById('quickInFileTargetColSelect');
+  if (!selectEl || !selectEl.value) return;
+
+  const doc = AppState.documents.find((d) => d.id === sourceDocId);
+  if (!doc) return;
+
+  doc.collectionId = selectEl.value;
+  AppState.selectedCollectionId = selectEl.value;
+  saveDocuments();
+  renderCollectionsSidebar();
+  renderCatalog();
+  renderDetailMetaPanel(doc);
+
+  const col = AppState.collections.find((c) => c.id === selectEl.value);
+  showToast(`Đã chuyển file "${doc.title}" vào thư mục "${col ? col.name : 'Tất cả bộ sưu tập'}"!`);
+}
+
+function handleMoveNoteToCollection(isCopy = false) {
+  const sourceId = document.getElementById('transferSourceNoteId').value;
+  const targetColId = document.getElementById('transferTargetColSelect').value || 'all';
+  const doc = AppState.documents.find((d) => d.id === sourceId);
+  if (!doc) return;
+
+  const col = AppState.collections.find((c) => c.id === targetColId);
+  const colName = col ? col.name : 'Tất cả bộ sưu tập';
+
+  if (isCopy) {
+    const copyDoc = {
+      ...doc,
+      id: 'doc-copy-' + Date.now(),
+      code: `${doc.code || 'GC'}-COPY`,
+      collectionId: targetColId,
+      createdAt: new Date().toISOString().slice(0, 10)
+    };
+    AppState.documents.unshift(copyDoc);
+    showToast(`Đã tạo bản sao văn bản vào thư mục "${colName}"!`);
+  } else {
+    doc.collectionId = targetColId;
+    showToast(`Đã di chuyển văn bản "${doc.title}" sang thư mục "${colName}"!`);
+  }
+
+  AppState.selectedCollectionId = targetColId;
+  saveDocuments();
+  renderCollectionsSidebar();
+  renderCatalog();
+  if (AppState.activeDocId === doc.id) {
+    renderDetailMetaPanel(doc);
+  }
+  closeModal('transferNoteModal');
+}
+
+function exportNoteDocumentAsFile(docId, format = 'doc') {
+  const doc = AppState.documents.find((d) => d.id === docId);
+  if (!doc) return;
+
+  const safeFileName = (doc.title || 'van-ban-ghi-chu').replace(/[\\/:*?"<>|]/g, '_');
+  const contentHtml = doc.noteContent || `<p>${escapeHtml(doc.description || '')}</p>`;
+
+  if (format === 'txt') {
+    const textContent = `${doc.title}\nMã số: ${doc.code || doc.id}\nNgày: ${doc.createdAt || ''}\n----------------------------------------\n\n${stripHtmlToText(contentHtml)}`;
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeFileName}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Đã xuất file "${safeFileName}.txt"!`);
+    return;
+  }
+
+  // Xuất file Microsoft Word (.doc) giữ nguyên định dạng bảng biểu, tiêu đề, màu sắc
+  const wordHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8" />
+      <title>${escapeHtml(doc.title)}</title>
+      <style>
+        body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; color: #000; }
+        h1, h2, h3 { color: #1b365d; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #333; padding: 6px 8px; }
+      </style>
+    </head>
+    <body>
+      ${contentHtml}
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff', wordHtml], { type: 'application/msword;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeFileName}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Đã xuất văn bản ra file Word "${safeFileName}.doc"!`);
+}
+
+function printNoteDocument(docId) {
+  const doc = AppState.documents.find((d) => d.id === docId);
+  if (!doc) return;
+  const contentHtml = doc.noteContent || `<p>${escapeHtml(doc.description || '')}</p>`;
+  const win = window.open('', '_blank', 'width=860,height=720');
+  if (!win) {
+    alert('Vui lòng cho phép mở cửa sổ bật lên (Pop-up) để in hoặc lưu PDF.');
+    return;
+  }
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <meta charset="UTF-8" />
+      <title>${escapeHtml(doc.title)}</title>
+      <style>
+        body { font-family: 'Times New Roman', serif; padding: 32px 44px; color: #0f172a; line-height: 1.65; }
+        h1, h2, h3 { color: #254b73; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+        td, th { border: 1px solid #64748b; padding: 6px 10px; }
+      </style>
+    </head>
+    <body>
+      ${contentHtml}
+      <script>window.onload = function() { window.print(); };<\/script>
+    </body>
+    </html>
+  `);
+  win.document.close();
 }
 
 function handleDownloadDocument(docId) {
@@ -1778,6 +2675,11 @@ function handleDownloadDocument(docId) {
   saveDocuments();
   renderCatalog();
 
+  if (isNoteDocument(doc) && !doc.driveFileId && !doc.driveUrl) {
+    exportNoteDocumentAsFile(doc.id, 'doc');
+    return;
+  }
+
   const dlUrl = DriveService.getDownloadUrl(doc);
   if (dlUrl) {
     const a = document.createElement('a');
@@ -1791,18 +2693,30 @@ function handleDownloadDocument(docId) {
   }
 }
 
-function handleDeleteDocument(docId) {
-  if (!canManageDocs()) return;
+function handleDeleteDocument(docId, ev = null) {
+  if (ev && ev.stopPropagation) {
+    ev.stopPropagation();
+  }
   const doc = AppState.documents.find((d) => d.id === docId);
   if (!doc) return;
-  if (!confirm(`Xóa hồ sơ "${doc.title}" khỏi thư viện?`)) return;
+  if (!confirm(`Bạn có chắc chắn muốn XÓA file "${doc.title}" khỏi thư viện không?`)) return;
 
   AppState.documents = AppState.documents.filter((d) => d.id !== docId);
+  // Đồng thời gỡ khỏi danh sách đính kèm nếu có
+  AppState.documents.forEach((d) => {
+    if (d.linkedDocId === docId) d.linkedDocId = '';
+    if (Array.isArray(d.attachedNotes)) {
+      d.attachedNotes = d.attachedNotes.filter((n) => n.noteId !== docId);
+    }
+  });
+
   saveDocuments();
   closeModal('detailModal');
+  closeModal('transferNoteModal');
+  populateFilterDropdowns();
   renderCollectionsSidebar();
   renderCatalog();
-  showToast('Đã xóa hồ sơ khỏi danh mục.');
+  showToast(`Đã xóa file "${doc.title}" khỏi thư viện và đồng bộ Cloud.`);
 }
 
 // ==========================================================================
