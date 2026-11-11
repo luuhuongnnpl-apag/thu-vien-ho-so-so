@@ -18,6 +18,13 @@
       "driveFolderId": ""
     },
     {
+      "id": "ghi-chu",
+      "name": "GHI CHÚ",
+      "parentId": null,
+      "description": "Tạo và soạn thảo văn bản bằng ghi chú trực tiếp trên web, sau đó lưu lại và chuyển vào các thư mục hoặc hồ sơ cụ thể",
+      "driveFolderId": ""
+    },
+    {
       "id": "chuong-trinh-ao-tao",
       "name": "CHƯƠNG TRÌNH ĐÀO TẠO",
       "parentId": null,
